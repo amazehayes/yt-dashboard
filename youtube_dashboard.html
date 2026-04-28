@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Analytics Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f5;
+    --muted: #6b6b80;
+    --accent: #5b6ef5;
+    --accent2: #3dd68c;
+    --accent3: #f5a623;
+    --red: #f55b5b;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* LAYOUT */
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 28px 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .main { padding: 32px 36px; overflow-x: hidden; }
+
+  /* SIDEBAR */
+  .logo { padding: 0 24px 28px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .logo-mark { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+  .logo-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .nav-label { font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; padding: 0 24px; margin-bottom: 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 24px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent; }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(91,110,245,0.08); }
+  .nav-icon { width: 16px; height: 16px; opacity: 0.7; }
+  .nav-section { margin-bottom: 24px; }
+  .ch-list { padding: 0 16px; margin-top: 8px; }
+  .ch-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .ch-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .ch-item.active { background: rgba(255,255,255,0.06); color: var(--text); }
+  .ch-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .sidebar-footer { margin-top: auto; padding: 20px 24px 0; border-top: 1px solid var(--border); }
+  .last-sync { font-size: 11px; color: var(--muted); }
+  .sync-btn { margin-top: 10px; width: 100%; padding: 8px; background: rgba(91,110,245,0.12); border: 1px solid rgba(91,110,245,0.3); border-radius: 6px; color: var(--accent); font-size: 12px; font-family: var(--font); cursor: pointer; transition: all 0.15s; }
+  .sync-btn:hover { background: rgba(91,110,245,0.2); }
+  .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* HEADER */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .tab-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .tab-btn { padding: 7px 16px; font-size: 12px; font-family: var(--font); background: transparent; border: none; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .tab-btn.active { background: var(--surface2); color: var(--text); }
+
+  /* METRIC CARDS */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .m-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; position: relative; overflow: hidden; transition: border-color 0.2s; }
+  .m-card:hover { border-color: var(--border2); }
+  .m-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .m-card.c1::before { background: var(--accent); }
+  .m-card.c2::before { background: var(--accent2); }
+  .m-card.c3::before { background: var(--accent3); }
+  .m-card.c4::before { background: var(--red); }
+  .m-card.c5::before { background: #c77dff; }
+  .m-card.c6::before { background: #48cae4; }
+  .m-label { font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  .m-val { font-size: 24px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+  .m-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* CHARTS */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .chart-card.wide { grid-column: span 2; }
+  .card-title { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .leg-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* TABLE */
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 28px; }
+  .tbl-head { display: grid; padding: 12px 20px; background: var(--surface2); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; gap: 8px; border-bottom: 1px solid var(--border); }
+  .tbl-row { display: grid; padding: 12px 20px; border-bottom: 1px solid var(--border); gap: 8px; align-items: center; font-size: 13px; transition: background 0.1s; }
+  .tbl-row:last-child { border-bottom: none; }
+  .tbl-row:hover { background: rgba(255,255,255,0.03); }
+  .cell-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; font-family: var(--mono); }
+  .ret-bar-bg { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 4px; }
+  .ret-bar-fill { height: 100%; border-radius: 2px; }
+
+  /* LOADING / ERROR */
+  .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; color: var(--muted); text-align: center; }
+  .state-box h3 { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+  .state-box p { font-size: 13px; line-height: 1.6; max-width: 420px; }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SETUP MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 36px; max-width: 500px; width: 90%; }
+  .modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .modal label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+  .modal input { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 7px; padding: 10px 14px; color: var(--text); font-family: var(--mono); font-size: 13px; margin-bottom: 16px; outline: none; transition: border-color 0.15s; }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; }
+  .btn-primary { flex: 1; padding: 10px; background: var(--accent); border: none; border-radius: 7px; color: #fff; font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-secondary { padding: 10px 16px; background: transparent; border: 1px solid var(--border2); border-radius: 7px; color: var(--muted); font-family: var(--font); font-size: 13px; cursor: pointer; }
+  .instructions { background: var(--bg); border-radius: 7px; padding: 14px; margin-bottom: 20px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .instructions code { color: var(--accent2); font-family: var(--mono); font-size: 11px; }
+  .step { display: flex; gap: 10px; margin-bottom: 8px; }
+  .step-n { width: 18px; height: 18px; border-radius: 50%; background: rgba(91,110,245,0.2); color: var(--accent); font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL -->
+<div class="modal-bg" id="setupModal">
+  <div class="modal">
+    <h2>Connect your Google Sheet</h2>
+    <p>Paste your Google Sheet ID and a Sheets API key to load your YouTube analytics data.</p>
+    <div class="instructions">
+      <div class="step"><div class="step-n">1</div><div>Your Sheet ID is in the URL: <code>spreadsheets/d/<strong>THIS_PART</strong>/edit</code></div></div>
+      <div class="step"><div class="step-n">2</div><div>Get a free API key at <code>console.cloud.google.com</code> → APIs & Services → Credentials → Create API Key. Enable the <code>Google Sheets API</code>.</div></div>
+      <div class="step"><div class="step-n">3</div><div>Make your Sheet viewable: Share → Anyone with the link → Viewer.</div></div>
+    </div>
+    <label>Sheet ID</label>
+    <input id="sheetIdInput" type="text" placeholder="13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U" value="13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U" />
+    <label>Google Sheets API Key</label>
+    <input id="apiKeyInput" type="text" placeholder="AIza..." />
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="loadDemo()">Use demo data</button>
+      <button class="btn-primary" onclick="connectSheet()">Connect Sheet</button>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">YT Analytics</div>
+      <div class="logo-name">Channel Hub</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Views</div>
+      <div class="nav-item active" onclick="setPage('overview')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="8" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor" opacity=".7"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
+        Overview
+      </div>
+      <div class="nav-item" onclick="setPage('videos')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5l4 2.5-4 2.5V5.5z" fill="currentColor"/></svg>
+        Top Videos
+      </div>
+      <div class="nav-item" onclick="setPage('monthly')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12 L4 8 L7 10 L10 5 L13 7 L15 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+        Monthly Trends
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Channels</div>
+      <div class="ch-list" id="chList"></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="last-sync" id="lastSync">Not yet synced</div>
+      <button class="sync-btn" onclick="loadData()" id="syncBtn">Refresh data</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainContent">
+    <div class="state-box">
+      <div class="spinner"></div>
+      <h3>Connect your data</h3>
+      <p>Fill in your Sheet ID and API key to get started.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
+const SHEET_TABS = { summary: 'Channel Summary', monthly: 'Monthly', videos: 'Video Performance' };
+const CH_COLORS = ['#5b6ef5','#3dd68c','#f5a623','#c77dff','#f55b5b','#48cae4','#f5c542','#ff6b6b'];
+
+let state = { page: 'overview', activeChannel: 'ALL', data: null, apiKey: '', sheetId: SHEET_ID };
+let charts = {};
+
+// ── SETUP ─────────────────────────────────────────────────────
+function connectSheet() {
+  const id  = document.getElementById('sheetIdInput').value.trim();
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!id || !key) { alert('Please enter both Sheet ID and API key.'); return; }
+  state.sheetId = id;
+  state.apiKey  = key;
+  localStorage.setItem('yt_sheet_id', id);
+  localStorage.setItem('yt_api_key', key);
+  document.getElementById('setupModal').style.display = 'none';
+  loadData();
+}
+
+function loadDemo() {
+  document.getElementById('setupModal').style.display = 'none';
+  state.data = getDemoData();
+  buildSidebar();
+  renderPage();
+}
+
+// ── FETCH FROM SHEETS API ─────────────────────────────────────
+async function loadData() {
+  if (!state.apiKey) { document.getElementById('setupModal').style.display = 'flex'; return; }
+  document.getElementById('syncBtn').disabled = true;
+  document.getElementById('syncBtn').textContent = 'Loading...';
+  setLoading();
+  try {
+    const [summary, monthly, videos] = await Promise.all([
+      fetchSheet(SHEET_TABS.summary),
+      fetchSheet(SHEET_TABS.monthly),
+      fetchSheet(SHEET_TABS.videos),
+    ]);
+    state.data = { summary, monthly, videos };
+    state.lastSync = new Date().toLocaleTimeString();
+    document.getElementById('lastSync').textContent = 'Synced ' + state.lastSync;
+    buildSidebar();
+    renderPage();
+  } catch(e) {
+    showError(e.message);
+  }
+  document.getElementById('syncBtn').disabled = false;
+  document.getElementById('syncBtn').textContent = 'Refresh data';
+}
+
+async function fetchSheet(tabName) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${state.sheetId}/values/${encodeURIComponent(tabName)}?key=${state.apiKey}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Could not load "${tabName}" tab. Check your API key and that the sheet is shared publicly.`);
+  const json = await r.json();
+  const [headers, ...rows] = json.values || [];
+  return rows.map(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = row[i] || '');
+    return obj;
+  });
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────
+function buildSidebar() {
+  if (!state.data) return;
+  const channels = ['ALL', ...state.data.summary.map(r => r['Channel'])];
+  document.getElementById('chList').innerHTML = channels.map((ch, i) => {
+    const color = ch === 'ALL' ? 'var(--muted)' : CH_COLORS[(i-1) % CH_COLORS.length];
+    return `<div class="ch-item${state.activeChannel===ch?' active':''}" onclick="setChannel('${ch}')">
+      <span class="ch-dot" style="background:${color}"></span>
+      <span>${ch === 'ALL' ? 'All channels' : ch}</span>
+    </div>`;
+  }).join('');
+}
+
+function setChannel(ch) {
+  state.activeChannel = ch;
+  buildSidebar();
+  renderPage();
+}
+
+function setPage(p) {
+  state.page = p;
+  document.querySelectorAll('.nav-item').forEach((el, i) => el.classList.toggle('active', ['overview','videos','monthly'][i] === p));
+  renderPage();
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderPage() {
+  destroyCharts();
+  if (state.page === 'overview') renderOverview();
+  else if (state.page === 'videos') renderVideos();
+  else if (state.page === 'monthly') renderMonthly();
+}
+
+function getFilteredSummary() {
+  if (!state.data) return [];
+  if (state.activeChannel === 'ALL') return state.data.summary;
+  return state.data.summary.filter(r => r['Channel'] === state.activeChannel);
+}
+
+function agg(rows, col) { return rows.reduce((s, r) => s + (parseFloat(r[col]) || 0), 0); }
+function avg(rows, col) { return rows.length ? agg(rows, col) / rows.length : 0; }
+function fmt(n) { return n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : Math.round(n).toString(); }
+function fmtD(n) { return '$' + Math.round(n).toLocaleString(); }
+function chColor(name) { const i = state.data?.summary.findIndex(r=>r['Channel']===name); return i >= 0 ? CH_COLORS[i % CH_COLORS.length] : '#888'; }
+
+// ── OVERVIEW ──────────────────────────────────────────────────
+function renderOverview() {
+  const rows = getFilteredSummary();
+  const totalViews  = agg(rows, 'Total Views');
+  const totalWH     = agg(rows, 'Total Watch Hours');
+  const totalRev    = agg(rows, 'Total Revenue ($)');
+  const totalSubs   = agg(rows, 'Total Subscribers');
+  const avgCTR      = avg(rows, 'Avg CTR (%)');
+  const avgRet      = avg(rows, 'Avg Retention %');
+
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">${state.activeChannel === 'ALL' ? 'All Channels' : state.activeChannel}</div>
+        <div class="page-sub">${rows.length} channel${rows.length !== 1 ? 's' : ''} · Last 365 days</div>
+      </div>
+      <div class="tab-group">
+        <button class="tab-btn active">Summary</button>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="m-card c1"><div class="m-label">Total views</div><div class="m-val">${fmt(totalViews)}</div></div>
+      <div class="m-card c2"><div class="m-label">Watch hours</div><div class="m-val">${fmt(totalWH)}</div></div>
+      <div class="m-card c3"><div class="m-label">Revenue</div><div class="m-val">${fmtD(totalRev)}</div></div>
+      <div class="m-card c4"><div class="m-label">Subs gained</div><div class="m-val">${fmt(totalSubs)}</div></div>
+      <div class="m-card c5"><div class="m-label">Avg CTR</div><div class="m-val">${avgCTR.toFixed(1)}%</div></div>
+      <div class="m-card c6"><div class="m-label">Avg retention</div><div class="m-val">${avgRet.toFixed(1)}%</div></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="card-title">Views by channel</div>
+        <div class="legend" id="leg1"></div>
+        <div style="position:relative;height:220px"><canvas id="viewsChart" role="img" aria-label="Bar chart of views by channel">Views by channel</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">Revenue by channel</div>
+        <div class="legend" id="leg2"></div>
+        <div style="position:relative;height:220px"><canvas id="revChart" role="img" aria-label="Bar chart of revenue by channel">Revenue by channel</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">CTR vs Retention</div>
+        <div style="position:relative;height:200px"><canvas id="scatterChart" role="img" aria-label="Scatter chart of CTR versus retention rate per channel">CTR vs retention scatter</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">Watch hours by channel</div>
+        <div style="position:relative;height:200px"><canvas id="whChart" role="img" aria-label="Doughnut chart of watch hours by channel">Watch hours doughnut</canvas></div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="tbl-head" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
+        <span>Channel</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span><span>Videos</span>
+      </div>
+      ${rows.sort((a,b)=>parseFloat(b['Total Views']||0)-parseFloat(a['Total Views']||0)).map(r => {
+        const color = chColor(r['Channel']);
+        const ret = parseFloat(r['Avg Retention %'])||0;
+        return `<div class="tbl-row" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="ch-dot" style="background:${color}"></span>
+            <div><div class="cell-title">${r['Channel']}</div></div>
+          </div>
+          <div style="font-family:var(--mono);font-size:12px">${fmt(parseFloat(r['Total Views'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmt(parseFloat(r['Total Watch Hours'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmtD(parseFloat(r['Total Revenue ($)'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
+          <div>
+            <div style="font-family:var(--mono);font-size:12px">${ret.toFixed(1)}%</div>
+            <div class="ret-bar-bg"><div class="ret-bar-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div>
+          </div>
+          <div style="font-family:var(--mono);font-size:12px;color:var(--muted)">${r['Video Count']||'—'}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  const labels = rows.map(r => r['Channel'].split(' ')[0]);
+  const colors = rows.map(r => chColor(r['Channel']));
+
+  // Legend helper
+  const makeLeg = (id) => {
+    document.getElementById(id).innerHTML = rows.map(r =>
+      `<span class="leg-item"><span class="leg-sq" style="background:${chColor(r['Channel'])}"></span>${r['Channel'].split(' ')[0]}</span>`
+    ).join('');
+  };
+  makeLeg('leg1'); makeLeg('leg2');
+
+  charts.views = new Chart(document.getElementById('viewsChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: rows.map(r=>parseFloat(r['Total Views'])||0), backgroundColor: colors, borderRadius: 5 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ticks:{callback:v=>fmt(v),font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}}, x:{ticks:{font:{size:11},color:'#6b6b80'},grid:{display:false},border:{display:false}} } }
+  });
+
+  charts.rev = new Chart(document.getElementById('revChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: rows.map(r=>parseFloat(r['Total Revenue ($)'])||0), backgroundColor: colors, borderRadius: 5 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ticks:{callback:v=>'$'+fmt(v),font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}}, x:{ticks:{font:{size:11},color:'#6b6b80'},grid:{display:false},border:{display:false}} } }
+  });
+
+  charts.scatter = new Chart(document.getElementById('scatterChart'), {
+    type: 'scatter',
+    data: { datasets: rows.map(r => ({ label: r['Channel'], data: [{x: parseFloat(r['Avg CTR (%)'])||0, y: parseFloat(r['Avg Retention %'])||0}], backgroundColor: chColor(r['Channel']), pointRadius: 8 })) },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: CTR ${ctx.parsed.x.toFixed(1)}% · Ret ${ctx.parsed.y.toFixed(1)}%`}}},
+      scales:{ x:{title:{display:true,text:'CTR %',color:'#6b6b80',font:{size:11}},ticks:{font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}}, y:{title:{display:true,text:'Retention %',color:'#6b6b80',font:{size:11}},ticks:{font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}} } }
+  });
+
+  charts.wh = new Chart(document.getElementById('whChart'), {
+    type: 'doughnut',
+    data: { labels: rows.map(r=>r['Channel']), datasets: [{ data: rows.map(r=>parseFloat(r['Total Watch Hours'])||0), backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.parsed)}hrs`}}}, cutout:'65%' }
+  });
+}
+
+// ── TOP VIDEOS ────────────────────────────────────────────────
+function renderVideos() {
+  if (!state.data) return;
+  let videos = state.data.videos;
+  if (state.activeChannel !== 'ALL') videos = videos.filter(r => r['Channel'] === state.activeChannel);
+  videos = videos.sort((a,b) => (parseFloat(b['Views'])||0) - (parseFloat(a['Views'])||0)).slice(0, 50);
+
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Top Videos</div>
+        <div class="page-sub">${state.activeChannel === 'ALL' ? 'All channels' : state.activeChannel} · top 50 by views</div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-head" style="grid-template-columns:3fr 80px 80px 80px 70px 70px">
+        <span>Video</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span>
+      </div>
+      ${videos.map(r => {
+        const color = chColor(r['Channel']);
+        const ret = parseFloat(r['Avg Retention %'])||0;
+        const pub = r['Published At'] ? r['Published At'].substring(0,10) : '';
+        return `<div class="tbl-row" style="grid-template-columns:3fr 80px 80px 80px 70px 70px">
+          <div>
+            <div class="cell-title">${r['Title']||'Untitled'}</div>
+            <div class="cell-sub" style="display:flex;gap:8px;align-items:center">
+              <span style="color:${color}">${r['Channel']}</span>
+              ${pub ? `<span>·</span><span>${pub}</span>` : ''}
+            </div>
+          </div>
+          <div style="font-family:var(--mono);font-size:12px">${fmt(parseFloat(r['Views'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmt(parseFloat(r['Watch Hours'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
+          <div>
+            <div style="font-family:var(--mono);font-size:12px">${ret.toFixed(1)}%</div>
+            <div class="ret-bar-bg"><div class="ret-bar-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── MONTHLY ───────────────────────────────────────────────────
+function renderMonthly() {
+  if (!state.data) return;
+  let rows = state.data.monthly;
+  if (state.activeChannel !== 'ALL') rows = rows.filter(r => r['Channel'] === state.activeChannel);
+
+  // Group by Period for chart
+  const periods = [...new Set(rows.map(r => r['Period']))].sort((a,b) => {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const [am, ay] = a.split(' '); const [bm, by] = b.split(' ');
+    return (+ay - +by) || (months.indexOf(am) - months.indexOf(bm));
+  });
+
+  const channels = [...new Set(rows.map(r => r['Channel']))];
+
+  const main = document.getElementById('mainContent');
+  main.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Monthly Trends</div>
+        <div class="page-sub">${state.activeChannel === 'ALL' ? 'All channels' : state.activeChannel}</div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card wide">
+        <div class="card-title">Views by month</div>
+        <div class="legend" id="mLeg"></div>
+        <div style="position:relative;height:260px"><canvas id="monthViewsChart" role="img" aria-label="Line chart of monthly views per channel">Monthly views</canvas></div>
+      </div>
+      <div class="chart-card wide">
+        <div class="card-title">Revenue by month</div>
+        <div style="position:relative;height:220px"><canvas id="monthRevChart" role="img" aria-label="Line chart of monthly revenue per channel">Monthly revenue</canvas></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-head" style="grid-template-columns:1.5fr 1fr 90px 90px 80px 70px">
+        <span>Channel</span><span>Period</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Videos</span>
+      </div>
+      ${rows.sort((a,b)=>{
+        const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const [am,ay]=a['Period'].split(' ');const [bm,by]=b['Period'].split(' ');
+        return (+by-+ay)||(months.indexOf(bm)-months.indexOf(am));
+      }).slice(0,60).map(r => {
+        const color = chColor(r['Channel']);
+        return `<div class="tbl-row" style="grid-template-columns:1.5fr 1fr 90px 90px 80px 70px">
+          <div style="display:flex;align-items:center;gap:8px"><span class="ch-dot" style="background:${color}"></span>${r['Channel']}</div>
+          <div style="font-size:12px;color:var(--muted)">${r['Period']}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmt(parseFloat(r['Views'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmt(parseFloat(r['Watch Hours'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
+          <div style="font-family:var(--mono);font-size:12px;color:var(--muted)">${r['Video Count']||'—'}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  document.getElementById('mLeg').innerHTML = channels.map(ch =>
+    `<span class="leg-item"><span class="leg-sq" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`
+  ).join('');
+
+  charts.monthViews = new Chart(document.getElementById('monthViewsChart'), {
+    type: 'line',
+    data: { labels: periods, datasets: channels.map(ch => ({
+      label: ch,
+      data: periods.map(p => { const r = rows.find(r=>r['Channel']===ch&&r['Period']===p); return r ? parseFloat(r['Views'])||0 : 0; }),
+      borderColor: chColor(ch), backgroundColor: chColor(ch)+'20', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2
+    }))},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ticks:{callback:v=>fmt(v),font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}}, x:{ticks:{font:{size:10},color:'#6b6b80',maxRotation:45},grid:{display:false},border:{display:false}} } }
+  });
+
+  charts.monthRev = new Chart(document.getElementById('monthRevChart'), {
+    type: 'line',
+    data: { labels: periods, datasets: channels.map(ch => ({
+      label: ch,
+      data: periods.map(p => { const r = rows.find(r=>r['Channel']===ch&&r['Period']===p); return r ? parseFloat(r['Revenue ($)'])||0 : 0; }),
+      borderColor: chColor(ch), backgroundColor: 'transparent', tension: 0.4, pointRadius: 3, borderWidth: 2, borderDash: ch===channels[0]?[]:[4,3]
+    }))},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ticks:{callback:v=>'$'+fmt(v),font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}}, x:{ticks:{font:{size:10},color:'#6b6b80',maxRotation:45},grid:{display:false},border:{display:false}} } }
+  });
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function destroyCharts() { Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} }); charts = {}; }
+function setLoading() { document.getElementById('mainContent').innerHTML = '<div class="state-box"><div class="spinner"></div><h3>Loading data...</h3><p>Fetching from your Google Sheet.</p></div>'; }
+function showError(msg) { document.getElementById('mainContent').innerHTML = `<div class="state-box"><h3>Connection error</h3><p>${msg}</p><br><button class="sync-btn" style="width:auto;padding:8px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`; }
+
+// ── DEMO DATA ─────────────────────────────────────────────────
+function getDemoData() {
+  return {
+    summary: [
+      {'Channel':'Dynasty League Football','Total Views':'2404778','Total Watch Hours':'267826','Total Revenue ($)':'17691','Total Impressions':'20294877','Avg CTR (%)':'7.34','Avg Retention %':'34.85','Total Subscribers':'6262','Video Count':'500'},
+      {'Channel':'4for4 Fantasy Football','Total Views':'2902362','Total Watch Hours':'28059','Total Revenue ($)':'1335','Total Impressions':'3115653','Avg CTR (%)':'6.45','Avg Retention %':'24.98','Total Subscribers':'2114','Video Count':'123'},
+      {'Channel':'4for4 Live!','Total Views':'6836967','Total Watch Hours':'78071','Total Revenue ($)':'2517','Total Impressions':'7579964','Avg CTR (%)':'4.35','Avg Retention %':'32.25','Total Subscribers':'2510','Video Count':'500'},
+      {'Channel':'Bleacher Nation','Total Views':'2082202','Total Watch Hours':'24711','Total Revenue ($)':'586','Total Impressions':'1055286','Avg CTR (%)':'3.05','Avg Retention %':'48.73','Total Subscribers':'883','Video Count':'156'},
+      {'Channel':'Deep Dive Podcast','Total Views':'355172','Total Watch Hours':'105228','Total Revenue ($)':'428','Total Impressions':'393663','Avg CTR (%)':'6.61','Avg Retention %':'39.07','Total Subscribers':'738','Video Count':'500'},
+      {'Channel':'Betsperts Golf','Total Views':'53290','Total Watch Hours':'1212','Total Revenue ($)':'84','Total Impressions':'54554','Avg CTR (%)':'5.04','Avg Retention %':'35.81','Total Subscribers':'44','Video Count':'32'},
+    ],
+    monthly: [
+      {'Channel':'Dynasty League Football','Month':'1','Year':'2024','Period':'Jan 2024','Views':'180000','Watch Hours':'21000','Revenue ($)':'1200','Impressions':'1500000','Subscribers':'450','Video Count':'12'},
+      {'Channel':'Dynasty League Football','Month':'2','Year':'2024','Period':'Feb 2024','Views':'165000','Watch Hours':'19000','Revenue ($)':'1100','Impressions':'1400000','Subscribers':'380','Video Count':'10'},
+      {'Channel':'Dynasty League Football','Month':'3','Year':'2024','Period':'Mar 2024','Views':'210000','Watch Hours':'24000','Revenue ($)':'1450','Impressions':'1800000','Subscribers':'520','Video Count':'14'},
+      {'Channel':'Dynasty League Football','Month':'4','Year':'2024','Period':'Apr 2024','Views':'280000','Watch Hours':'32000','Revenue ($)':'1900','Impressions':'2300000','Subscribers':'680','Video Count':'16'},
+      {'Channel':'4for4 Live!','Month':'1','Year':'2024','Period':'Jan 2024','Views':'520000','Watch Hours':'6200','Revenue ($)':'190','Impressions':'600000','Subscribers':'180','Video Count':'42'},
+      {'Channel':'4for4 Live!','Month':'2','Year':'2024','Period':'Feb 2024','Views':'490000','Watch Hours':'5800','Revenue ($)':'175','Impressions':'570000','Subscribers':'165','Video Count':'38'},
+      {'Channel':'4for4 Live!','Month':'3','Year':'2024','Period':'Mar 2024','Views':'610000','Watch Hours':'7100','Revenue ($)':'220','Impressions':'710000','Subscribers':'210','Video Count':'48'},
+      {'Channel':'4for4 Live!','Month':'4','Year':'2024','Period':'Apr 2024','Views':'720000','Watch Hours':'8500','Revenue ($)':'260','Impressions':'840000','Subscribers':'250','Video Count':'55'},
+    ],
+    videos: [
+      {'Channel':'Dynasty League Football','Video ID':'Fe47XWptWoo','Title':'A Post-Draft 2025 Dynasty Rookie Mock Draft!','Published At':'Apr 26, 2025','Duration (s)':'2686','Avg View Duration':'0:10:29','Avg Retention %':'23.43','Views':'23666','Watch Hours':'4137','Subscribers':'40','Revenue ($)':'272','Impressions':'150813','CTR (%)':'10.48'},
+      {'Channel':'Dynasty League Football','Video ID':'SjKUmX8H4S8','Title':'30 MUST STASH Players For 2026 Dynasty Fantasy Football!','Published At':'Dec 23, 2025','Duration (s)':'1109','Avg View Duration':'0:06:49','Avg Retention %':'36.91','Views':'31396','Watch Hours':'3569','Subscribers':'164','Revenue ($)':'268','Impressions':'304240','CTR (%)':'7.11'},
+      {'Channel':'Dynasty League Football','Video ID':'6z3BHfVwJEo','Title':'2025 Early Dynasty Rookie Mock Draft!','Published At':'Jan 6, 2025','Duration (s)':'2587','Avg View Duration':'0:10:56','Avg Retention %':'25.38','Views':'21199','Watch Hours':'3866','Subscribers':'78','Revenue ($)':'189','Impressions':'179029','CTR (%)':'7.98'},
+      {'Channel':'Dynasty League Football','Video ID':'4bJsZD9XFm4','Title':'The 10 Best Buys in Dynasty Right Now!','Published At':'Feb 1, 2026','Duration (s)':'3713','Avg View Duration':'0:13:21','Avg Retention %':'21.59','Views':'16351','Watch Hours':'3641','Subscribers':'23','Revenue ($)':'196','Impressions':'126396','CTR (%)':'9.45'},
+      {'Channel':'4for4 Live!','Video ID':'live001','Title':'Fantasy Football Live Show - Week 14','Published At':'Dec 10, 2024','Duration (s)':'3600','Avg View Duration':'0:38:00','Avg Retention %':'38.2','Views':'45000','Watch Hours':'2100','Subscribers':'90','Revenue ($)':'180','Impressions':'380000','CTR (%)':'5.2'},
+      {'Channel':'Bleacher Nation','Video ID':'bn001','Title':'Cubs Trade Deadline Preview 2025','Published At':'Jul 28, 2025','Duration (s)':'1800','Avg View Duration':'0:15:30','Avg Retention %':'52.1','Views':'38000','Watch Hours':'1800','Subscribers':'62','Revenue ($)':'95','Impressions':'290000','CTR (%)':'4.1'},
+    ]
+  };
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+(function init() {
+  const savedId  = localStorage.getItem('yt_sheet_id');
+  const savedKey = localStorage.getItem('yt_api_key');
+  if (savedId)  { document.getElementById('sheetIdInput').value = savedId; state.sheetId = savedId; }
+  if (savedKey) { document.getElementById('apiKeyInput').value = savedKey; state.apiKey = savedKey; }
+  if (savedKey) {
+    document.getElementById('setupModal').style.display = 'none';
+    loadData();
+  }
+})();
+</script>
+</body>
+</html>
