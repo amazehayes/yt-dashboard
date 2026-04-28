@@ -3,817 +3,1020 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube Analytics Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Channel Analytics — Executive Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #13131a;
-    --surface2: #1c1c26;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.12);
-    --text: #f0f0f5;
-    --muted: #6b6b80;
-    --accent: #5b6ef5;
-    --accent2: #3dd68c;
-    --accent3: #f5a623;
-    --red: #f55b5b;
-    --font: 'DM Sans', sans-serif;
-    --mono: 'DM Mono', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
-  .shell { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+:root {
+  --bg: #080810;
+  --bg2: #0e0e1a;
+  --surface: #111120;
+  --surface2: #181830;
+  --surface3: #1e1e38;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #ffffff;
+  --muted: #6a6a8a;
+  --muted2: #9494b8;
+  --gold: #f0b429;
+  --gold2: #ffd166;
+  --electric: #00e5ff;
+  --green: #00e096;
+  --red: #ff4d6d;
+  --purple: #7c3aed;
+  --disp: 'Barlow Condensed', sans-serif;
+  --body: 'Barlow', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
 
-  /* SIDEBAR */
-  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 28px 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-  .logo { padding: 0 24px 24px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-  .logo-mark { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
-  .logo-name { font-size: 15px; font-weight: 600; }
-  .nav-label { font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; padding: 0 24px; margin-bottom: 8px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 24px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent; }
-  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
-  .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(91,110,245,0.08); }
-  .nav-section { margin-bottom: 20px; }
-  .ch-list { padding: 0 16px; margin-top: 4px; }
-  .ch-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.15s; }
-  .ch-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-  .ch-item.active { background: rgba(255,255,255,0.07); color: var(--text); }
-  .ch-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .sidebar-footer { margin-top: auto; padding: 16px 24px 0; border-top: 1px solid var(--border); }
-  .sync-btn { margin-top: 8px; width: 100%; padding: 8px; background: rgba(91,110,245,0.12); border: 1px solid rgba(91,110,245,0.3); border-radius: 6px; color: var(--accent); font-size: 12px; font-family: var(--font); cursor: pointer; transition: all 0.15s; }
-  .sync-btn:hover { background: rgba(91,110,245,0.2); }
-  .sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* NOISE TEXTURE OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
 
-  /* MAIN */
-  .main { padding: 32px 36px; overflow-x: hidden; }
-  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-  .page-title { font-size: 22px; font-weight: 600; }
-  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+/* LAYOUT */
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; position: relative; z-index: 1; }
 
-  /* FILTER BAR */
-  .filter-bar { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 24px; flex-wrap: wrap; }
-  .filter-bar label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-  .filter-bar input[type=month] { background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 10px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; cursor: pointer; }
-  .filter-bar input[type=month]:focus { border-color: var(--accent); }
-  .filter-sep { color: var(--muted); }
-  .q-btn { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-family: var(--font); cursor: pointer; border: 1px solid var(--border2); background: transparent; color: var(--muted); transition: all 0.15s; }
-  .q-btn:hover { color: var(--text); border-color: var(--accent); }
+/* SIDEBAR */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--electric), var(--green));
+}
+.logo-block { padding: 32px 24px 28px; border-bottom: 1px solid var(--border); }
+.logo-eyebrow { font-family: var(--mono); font-size: 9px; color: var(--gold); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 8px; }
+.logo-title { font-family: var(--disp); font-size: 22px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1; }
+.logo-title span { color: var(--gold); }
+.logo-sub { font-size: 11px; color: var(--muted); margin-top: 6px; letter-spacing: 0.05em; }
 
-  /* METRICS */
-  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .m-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
-  .m-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-  .m-card.c1::before { background: var(--accent); }
-  .m-card.c2::before { background: var(--accent2); }
-  .m-card.c3::before { background: var(--accent3); }
-  .m-card.c4::before { background: var(--red); }
-  .m-card.c5::before { background: #c77dff; }
-  .m-card.c6::before { background: #48cae4; }
-  .m-card.c7::before { background: #f5c542; }
-  .m-card.c8::before { background: #ff6b9d; }
-  .m-label { font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-  .m-val { font-size: 22px; font-weight: 600; font-family: var(--mono); }
-  .m-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.nav-section { padding: 20px 0; border-bottom: 1px solid var(--border); }
+.nav-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; padding: 0 24px; margin-bottom: 10px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 24px;
+  font-size: 13px; font-weight: 500;
+  color: var(--muted2);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  position: relative;
+  letter-spacing: 0.02em;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-item.active {
+  color: var(--text);
+  border-left-color: var(--gold);
+  background: rgba(240,180,41,0.06);
+}
+.nav-item.active .nav-icon { color: var(--gold); }
+.nav-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
-  /* CHARTS */
-  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-  .chart-card.wide { grid-column: span 2; }
-  .card-title { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
-  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
-  .leg-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.ch-section { padding: 20px 0; flex: 1; }
+.ch-list { padding: 0 12px; }
+.ch-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+}
+.ch-card:hover { background: rgba(255,255,255,0.04); }
+.ch-card.active { background: rgba(255,255,255,0.07); border-color: var(--border2); }
+.ch-avatar {
+  width: 32px; height: 32px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--disp); font-size: 13px; font-weight: 800;
+  flex-shrink: 0;
+}
+.ch-info { flex: 1; min-width: 0; }
+.ch-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-views { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
 
-  /* TABLE */
-  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
-  .tbl-head { display: grid; padding: 11px 20px; background: var(--surface2); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; gap: 8px; border-bottom: 1px solid var(--border); }
-  .tbl-row { display: grid; padding: 11px 20px; border-bottom: 1px solid var(--border); gap: 8px; align-items: center; transition: background 0.1s; }
-  .tbl-row:last-child { border-bottom: none; }
-  .tbl-row:hover { background: rgba(255,255,255,0.02); }
-  .cell-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
-  .cell-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .mono { font-family: var(--mono); font-size: 12px; }
-  .ret-bar-bg { height: 3px; background: rgba(255,255,255,0.07); border-radius: 2px; margin-top: 4px; }
-  .ret-bar-fill { height: 100%; border-radius: 2px; }
-  .badge { font-size: 10px; font-family: var(--mono); padding: 2px 6px; border-radius: 4px; }
-  .up { background: rgba(61,214,140,0.12); color: var(--accent2); }
-  .dn { background: rgba(245,91,91,0.12); color: var(--red); }
-  .sec-title { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+.sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border); }
+.sync-time { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+.sync-btn {
+  width: 100%; padding: 9px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--muted2);
+  font-family: var(--body); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+.sync-btn:hover { border-color: var(--gold); color: var(--gold); }
+.sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* STATES */
-  .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; color: var(--muted); text-align: center; }
-  .state-box h3 { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
-  .state-box p { font-size: 13px; line-height: 1.6; max-width: 420px; }
-  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* MAIN */
+.main { padding: 0; overflow-x: hidden; }
 
-  /* SETUP MODAL */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 36px; max-width: 480px; width: 90%; }
-  .modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-  .modal p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
-  .modal label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 6px; }
-  .modal input { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 7px; padding: 10px 14px; color: var(--text); font-family: var(--mono); font-size: 12px; margin-bottom: 16px; outline: none; transition: border-color 0.15s; }
-  .modal input:focus { border-color: var(--accent); }
-  .modal-actions { display: flex; gap: 10px; }
-  .btn-primary { flex:1; padding:10px; background:var(--accent); border:none; border-radius:7px; color:#fff; font-family:var(--font); font-size:13px; font-weight:500; cursor:pointer; }
-  .btn-primary:hover { opacity: 0.85; }
-  .btn-sec { padding:10px 16px; background:transparent; border:1px solid var(--border2); border-radius:7px; color:var(--muted); font-family:var(--font); font-size:13px; cursor:pointer; }
-  .note { background: var(--surface2); border-radius: 7px; padding: 12px 14px; font-size: 12px; color: var(--muted); line-height: 1.7; margin-bottom: 20px; }
-  .note code { color: var(--accent2); font-family: var(--mono); }
+/* HERO BANNER */
+.hero {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 32px 40px 28px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  right: -60px; top: -60px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,180,41,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--gold); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 10px; }
+.hero-title { font-family: var(--disp); font-size: 38px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1; margin-bottom: 6px; }
+.hero-sub { font-size: 13px; color: var(--muted2); letter-spacing: 0.03em; }
+.hero-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+
+/* FILTER BAR */
+.filter-strip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  flex-wrap: wrap;
+}
+.filter-strip label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; padding: 0 4px; }
+.filter-strip input[type=month] {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--mono); font-size: 11px;
+  outline: none; cursor: pointer;
+  padding: 2px 4px;
+}
+.filter-strip input[type=month]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+.arrow-sep { color: var(--muted); font-size: 12px; }
+.yr-pill {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-family: var(--mono); font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--muted2);
+  transition: all 0.15s;
+}
+.yr-pill:hover { border-color: var(--gold); color: var(--gold); }
+.yr-pill.sel { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+
+/* CONTENT AREA */
+.content { padding: 32px 40px; }
+
+/* STAT HERO ROW */
+.stat-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 2px; margin-bottom: 32px; background: var(--border); border-radius: 12px; overflow: hidden; }
+.stat-block {
+  background: var(--surface);
+  padding: 24px 20px;
+  position: relative;
+  transition: background 0.2s;
+}
+.stat-block:hover { background: var(--surface2); }
+.stat-block::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.stat-block.s1::before { background: var(--gold); }
+.stat-block.s2::before { background: var(--electric); }
+.stat-block.s3::before { background: var(--green); }
+.stat-block.s4::before { background: var(--red); }
+.stat-block.s5::before { background: #a78bfa; }
+.stat-block.s6::before { background: #fb923c; }
+.stat-eyebrow { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px; }
+.stat-num { font-family: var(--disp); font-size: 42px; font-weight: 900; line-height: 1; letter-spacing: -0.01em; }
+.stat-unit { font-family: var(--disp); font-size: 20px; font-weight: 700; color: var(--muted2); }
+.stat-delta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-family: var(--mono); font-size: 10px; }
+.delta-up { color: var(--green); }
+.delta-dn { color: var(--red); }
+.delta-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* SECTION HEADER */
+.section-hd { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+.section-title { font-family: var(--disp); font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+.section-rule { flex: 1; height: 1px; background: var(--border); }
+.section-count { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+/* CHART CARDS */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.chart-card.wide { grid-column: span 2; }
+.chart-card.tall { grid-column: span 2; }
+.card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.card-title { font-family: var(--disp); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); }
+.card-val { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.leg { display: flex; gap: 16px; flex-wrap: wrap; }
+.leg-item { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted2); }
+.leg-bar { width: 16px; height: 3px; border-radius: 2px; }
+
+/* CHANNEL CARDS GRID */
+.ch-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.ch-perf-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.ch-perf-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.ch-perf-header { padding: 18px 20px 14px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+.ch-perf-avatar { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-size: 18px; font-weight: 900; flex-shrink: 0; }
+.ch-perf-name { font-family: var(--disp); font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.2; }
+.ch-perf-handle { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+.ch-perf-body { padding: 16px 20px; }
+.ch-stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.ch-stat { text-align: center; }
+.ch-stat-val { font-family: var(--disp); font-size: 24px; font-weight: 900; line-height: 1; }
+.ch-stat-lbl { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+.ch-perf-bar { height: 3px; border-radius: 2px; margin-top: 14px; background: var(--surface3); overflow: hidden; }
+.ch-perf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+.ch-yoy { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.yoy-tag { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; }
+.yoy-up { background: rgba(0,224,150,0.12); color: var(--green); }
+.yoy-dn { background: rgba(255,77,109,0.12); color: var(--red); }
+.yoy-neu { background: rgba(255,255,255,0.06); color: var(--muted2); }
+
+/* YOY COMPARISON TABLE */
+.yoy-table { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
+.yoy-thead { display: grid; padding: 14px 24px; background: var(--surface2); gap: 8px; border-bottom: 1px solid var(--border); }
+.yoy-thead span { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; }
+.yoy-trow { display: grid; padding: 16px 24px; border-bottom: 1px solid var(--border); gap: 8px; align-items: center; transition: background 0.1s; }
+.yoy-trow:last-child { border-bottom: none; }
+.yoy-trow:hover { background: rgba(255,255,255,0.02); }
+.ch-tag { display: flex; align-items: center; gap: 10px; }
+.ch-tag-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.ch-tag-name { font-family: var(--disp); font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.num-cell { font-family: var(--mono); font-size: 13px; }
+.yr-header { font-family: var(--disp); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.delta-cell { font-family: var(--mono); font-size: 11px; font-weight: 500; }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+/* MODAL */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 40px; max-width: 480px; width: 90%; position: relative; }
+.modal::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: linear-gradient(90deg, var(--gold), var(--electric)); border-radius: 16px 16px 0 0; }
+.modal h2 { font-family: var(--disp); font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.modal p { font-size: 13px; color: var(--muted2); line-height: 1.6; margin-bottom: 20px; }
+.modal label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.modal input { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: var(--mono); font-size: 12px; margin-bottom: 14px; outline: none; transition: border-color 0.15s; }
+.modal input:focus { border-color: var(--gold); }
+.modal-note { background: var(--surface2); border-radius: 8px; padding: 12px 16px; font-size: 12px; color: var(--muted2); line-height: 1.7; margin-bottom: 20px; }
+.modal-note code { color: var(--electric); font-family: var(--mono); font-size: 11px; }
+.modal-btns { display: flex; gap: 10px; }
+.btn-gold { flex:1; padding:12px; background:var(--gold); border:none; border-radius:8px; color:#000; font-family:var(--disp); font-size:15px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; transition:opacity 0.15s; }
+.btn-gold:hover { opacity: 0.85; }
+.btn-ghost { padding:12px 18px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--muted2); font-family:var(--body); font-size:13px; cursor:pointer; }
+
+/* STATES */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:400px; text-align:center; padding:40px; }
+.state-box h3 { font-family:var(--disp); font-size:24px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+.state-box p { font-size:13px; color:var(--muted2); max-width:360px; line-height:1.6; }
+.spinner { width:36px; height:36px; border:2px solid var(--border2); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:20px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation: fadeUp 0.4s ease forwards; }
+.fade-up-1 { animation-delay: 0.05s; opacity: 0; }
+.fade-up-2 { animation-delay: 0.1s; opacity: 0; }
+.fade-up-3 { animation-delay: 0.15s; opacity: 0; }
+.fade-up-4 { animation-delay: 0.2s; opacity: 0; }
 </style>
 </head>
 <body>
 
 <div class="modal-bg" id="setupModal">
   <div class="modal">
-    <h2>Connect your Google Sheet</h2>
-    <p>Enter your Sheet ID and a Google Sheets API key to load live data.</p>
-    <div class="note">
-      Get a free API key at <code>console.cloud.google.com</code> → APIs & Services → Credentials → Create API Key. Enable the <code>Google Sheets API</code> and share your Sheet as "Anyone with link can view".
+    <h2>Connect Data</h2>
+    <p>Enter your Google Sheet ID and API key to load live channel analytics.</p>
+    <div class="modal-note">
+      Get a free API key at <code>console.cloud.google.com</code> → APIs & Services → Credentials. Enable <code>Google Sheets API</code> and share your Sheet as "Anyone with link can view".
     </div>
     <label>Sheet ID</label>
     <input id="sheetIdInput" type="text" placeholder="13YtFan9EmzAnh..." />
     <label>API Key</label>
     <input id="apiKeyInput" type="text" placeholder="AIza..." />
-    <div class="modal-actions">
-      <button class="btn-sec" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" onclick="connectSheet()">Connect</button>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-gold" onclick="connectSheet()">Connect</button>
     </div>
   </div>
 </div>
 
 <div class="shell">
+  <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="logo">
-      <div class="logo-mark">YT Analytics</div>
-      <div class="logo-name">Channel Hub</div>
+    <div class="logo-block">
+      <div class="logo-eyebrow">Executive Dashboard</div>
+      <div class="logo-title">Channel <span>Hub</span></div>
+      <div class="logo-sub">YouTube Analytics Suite</div>
     </div>
     <div class="nav-section">
-      <div class="nav-label">Views</div>
+      <div class="nav-label">Navigation</div>
       <div class="nav-item active" onclick="setPage('overview')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="8" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor" opacity=".7"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
-        Overview
-      </div>
-      <div class="nav-item" onclick="setPage('monthly')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M1 12L4 8l3 2 3-5 3 2 2-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
-        Monthly Trends
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="8" width="3" height="7" rx="1" fill="currentColor" opacity=".4"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor" opacity=".7"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
+        Command Center
       </div>
       <div class="nav-item" onclick="setPage('yoy')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="6" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="1" width="6" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="6" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
         Year-over-Year
       </div>
+      <div class="nav-item" onclick="setPage('monthly')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12L4 8l3 2 3-5 3 2 2-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>
+        Monthly Trends
+      </div>
       <div class="nav-item" onclick="setPage('pervideo')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5l4 2.5-4 2.5V5.5z" fill="currentColor"/></svg>
-        Per-Video Averages
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 5.5l4 2.5-4 2.5V5.5z" fill="currentColor"/></svg>
+        Per-Video
       </div>
       <div class="nav-item" onclick="setPage('videos')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         Top Videos
       </div>
     </div>
-    <div class="nav-section">
-      <div class="nav-label">Channels</div>
+    <div class="ch-section">
+      <div class="nav-label" style="padding:20px 24px 10px">Channels</div>
       <div class="ch-list" id="chList"></div>
     </div>
     <div class="sidebar-footer">
-      <div style="font-size:11px;color:var(--muted)" id="lastSync">Not synced</div>
-      <button class="sync-btn" id="syncBtn" onclick="loadData()">Refresh data</button>
+      <div class="sync-time" id="lastSync">Not synced</div>
+      <button class="sync-btn" id="syncBtn" onclick="loadData()">↻ Refresh Data</button>
     </div>
   </aside>
+
+  <!-- MAIN -->
   <main class="main" id="mainContent">
-    <div class="state-box"><div class="spinner"></div><h3>Loading...</h3></div>
+    <div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Connecting to your analytics data...</p></div>
   </main>
 </div>
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
-const TABS = {
-  summary: 'Channel Summary',
-  monthly: 'Monthly',
-  pervideo: 'Per-Video Averages',
-  videos:  'Video Performance',
-};
-const CH_COLORS = ['#5b6ef5','#3dd68c','#f5a623','#c77dff','#f55b5b','#48cae4','#f5c542','#ff6b9d'];
+const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance' };
 
-// ── STATE ─────────────────────────────────────────────────────
-let S = {
-  page: 'overview',
-  channel: 'ALL',
-  from: '',
-  to: '',
-  apiKey: '',
-  sheetId: SHEET_ID,
-  data: null,
-};
+const PALETTE = ['#f0b429','#00e5ff','#00e096','#a78bfa','#ff4d6d','#fb923c','#38bdf8','#f472b6'];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let S = { page:'overview', channel:'ALL', from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null };
 let CHARTS = {};
 
 // ── INIT ──────────────────────────────────────────────────────
 (function init() {
   const k = localStorage.getItem('yt_api_key');
   const id = localStorage.getItem('yt_sheet_id');
-  if (id) S.sheetId = id;
-  if (k) {
-    S.apiKey = k;
-    document.getElementById('setupModal').style.display = 'none';
-    loadData();
-  } else {
-    document.getElementById('apiKeyInput').focus();
-  }
-  if (id) document.getElementById('sheetIdInput').value = id;
-  if (k)  document.getElementById('apiKeyInput').value  = k;
+  if (id) { S.sheetId = id; document.getElementById('sheetIdInput').value = id; }
+  if (k)  { S.apiKey  = k;  document.getElementById('apiKeyInput').value  = k;  }
+  if (k) { document.getElementById('setupModal').style.display='none'; loadData(); }
 })();
 
-// ── MODAL ─────────────────────────────────────────────────────
 function connectSheet() {
-  const id  = document.getElementById('sheetIdInput').value.trim();
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!id || !key) { alert('Please enter both fields.'); return; }
-  S.sheetId = id; S.apiKey = key;
-  localStorage.setItem('yt_sheet_id', id);
-  localStorage.setItem('yt_api_key', key);
-  closeModal();
-  loadData();
+  const id = document.getElementById('sheetIdInput').value.trim();
+  const k  = document.getElementById('apiKeyInput').value.trim();
+  if (!id||!k) { alert('Please fill in both fields.'); return; }
+  S.sheetId=id; S.apiKey=k;
+  localStorage.setItem('yt_sheet_id',id); localStorage.setItem('yt_api_key',k);
+  closeModal(); loadData();
 }
-function closeModal() { document.getElementById('setupModal').style.display = 'none'; }
+function closeModal() { document.getElementById('setupModal').style.display='none'; }
 
 // ── FETCH ─────────────────────────────────────────────────────
 async function loadData() {
-  if (!S.apiKey) { document.getElementById('setupModal').style.display = 'flex'; return; }
-  setSyncing(true);
-  setLoading();
+  if (!S.apiKey) { document.getElementById('setupModal').style.display='flex'; return; }
+  setSyncing(true); setLoading();
   try {
-    const [summary, monthly, pervideo, videos] = await Promise.all([
-      fetchTab(TABS.summary),
-      fetchTab(TABS.monthly),
-      fetchTab(TABS.pervideo),
-      fetchTab(TABS.videos),
+    const [summary,monthly,pervideo,videos] = await Promise.all([
+      fetchTab(TABS.summary), fetchTab(TABS.monthly),
+      fetchTab(TABS.pervideo), fetchTab(TABS.videos),
     ]);
-    S.data = { summary, monthly, pervideo, videos };
-
-    // Set default date range from actual data
-    const years = [...new Set(monthly.map(r => +r['Year']).filter(Boolean))].sort();
-    const months = monthly.map(r => ({ yr: +r['Year'], mo: +r['Month'] })).filter(r => r.yr && r.mo);
-    if (months.length) {
-      const sorted = months.sort((a,b) => a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo);
-      const first = sorted[0], last = sorted[sorted.length-1];
-      if (!S.from) S.from = `${first.yr}-${String(first.mo).padStart(2,'0')}`;
-      if (!S.to)   S.to   = `${last.yr}-${String(last.mo).padStart(2,'0')}`;
+    S.data = {summary,monthly,pervideo,videos};
+    const months = monthly.map(r=>({yr:+r['Year'],mo:+r['Month']})).filter(r=>r.yr&&r.mo)
+      .sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo);
+    if (months.length && !S.from) {
+      S.from=`${months[0].yr}-${String(months[0].mo).padStart(2,'0')}`;
+      S.to=`${months[months.length-1].yr}-${String(months[months.length-1].mo).padStart(2,'0')}`;
     }
-
-    document.getElementById('lastSync').textContent = 'Synced ' + new Date().toLocaleTimeString();
-    buildSidebar();
-    renderPage();
-  } catch(e) {
-    showError(e.message);
-  }
+    document.getElementById('lastSync').textContent='Synced '+new Date().toLocaleTimeString();
+    buildSidebar(); renderPage();
+  } catch(e) { showError(e.message); }
   setSyncing(false);
 }
 
 async function fetchTab(tab) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${S.sheetId}/values/${encodeURIComponent(tab)}?key=${S.apiKey}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Could not load "${tab}". Check API key and Sheet sharing settings.`);
-  const json = await r.json();
-  const [headers, ...rows] = json.values || [];
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${S.sheetId}/values/${encodeURIComponent(tab)}?key=${S.apiKey}`;
+  const r=await fetch(url);
+  if (!r.ok) throw new Error(`Could not load "${tab}". Check your API key and Sheet sharing.`);
+  const j=await r.json();
+  const [headers,...rows]=j.values||[];
   if (!headers) return [];
-  return rows.map(row => {
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i] ?? '');
-    return obj;
-  });
+  return rows.map(row=>{const o={};headers.forEach((h,i)=>o[h]=row[i]??'');return o;});
 }
 
 function setSyncing(v) {
-  const btn = document.getElementById('syncBtn');
-  btn.disabled = v;
-  btn.textContent = v ? 'Loading...' : 'Refresh data';
+  const b=document.getElementById('syncBtn');
+  b.disabled=v; b.textContent=v?'Loading...':'↻ Refresh Data';
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────
 function buildSidebar() {
   if (!S.data) return;
-  const chs = ['ALL', ...S.data.summary.map(r => r['Channel']).filter(Boolean)];
-  document.getElementById('chList').innerHTML = chs.map((ch, i) => {
-    const color = ch === 'ALL' ? 'var(--muted)' : CH_COLORS[(i-1) % CH_COLORS.length];
-    return `<div class="ch-item${S.channel===ch?' active':''}" onclick="setChannel('${ch.replace(/'/g,"\\'")}')">
-      <span class="ch-dot" style="background:${color}"></span>
-      <span>${ch === 'ALL' ? 'All channels' : ch}</span>
+  const chs=['ALL',...S.data.summary.map(r=>r['Channel']).filter(Boolean)];
+  document.getElementById('chList').innerHTML = chs.map((ch,i)=>{
+    const isAll=ch==='ALL';
+    const color=isAll?'#6a6a8a':PALETTE[(i-1)%PALETTE.length];
+    const initials=isAll?'ALL':ch.split(' ').map(w=>w[0]).join('').substring(0,3).toUpperCase();
+    const views=!isAll?(S.data.summary.find(r=>r['Channel']===ch)||{})['Total Views']:'';
+    return `<div class="ch-card${S.channel===ch?' active':''}" onclick="setChannel('${ch.replace(/'/g,"\\'")}')">
+      <div class="ch-avatar" style="background:${color}22;color:${color}">${initials}</div>
+      <div class="ch-info">
+        <div class="ch-name" style="color:${S.channel===ch?color:'inherit'}">${isAll?'All Channels':ch}</div>
+        ${views?`<div class="ch-views">${fmtNum(+views)} views</div>`:'<div class="ch-views">All channels</div>'}
+      </div>
     </div>`;
   }).join('');
 }
 
-function setChannel(ch) { S.channel = ch; buildSidebar(); renderPage(); }
+function setChannel(ch) { S.channel=ch; buildSidebar(); renderPage(); }
 function setPage(p) {
-  S.page = p;
-  document.querySelectorAll('.nav-item').forEach((el,i) =>
-    el.classList.toggle('active', ['overview','monthly','yoy','pervideo','videos'][i] === p));
+  S.page=p;
+  document.querySelectorAll('.nav-item').forEach((el,i)=>
+    el.classList.toggle('active',['overview','yoy','monthly','pervideo','videos'][i]===p));
   renderPage();
 }
 
-// ── FILTER HELPERS ────────────────────────────────────────────
-function inRange(yr, mo) {
-  if (!S.from || !S.to) return true;
-  const [fy,fm] = S.from.split('-').map(Number);
-  const [ty,tm] = S.to.split('-').map(Number);
-  return (yr > fy || (yr===fy && mo>=fm)) && (yr < ty || (yr===ty && mo<=tm));
+// ── HELPERS ───────────────────────────────────────────────────
+function inRange(yr,mo) {
+  if (!S.from||!S.to) return true;
+  const [fy,fm]=S.from.split('-').map(Number);
+  const [ty,tm]=S.to.split('-').map(Number);
+  return (yr>fy||(yr===fy&&mo>=fm))&&(yr<ty||(yr===ty&&mo<=tm));
 }
-
-function filterMonthly(rows) {
-  let r = rows.filter(r => inRange(+r['Year'], +r['Month']));
-  if (S.channel !== 'ALL') r = r.filter(r => r['Channel'] === S.channel);
+function filterMo(rows) {
+  let r=rows.filter(r=>inRange(+r['Year'],+r['Month']));
+  if (S.channel!=='ALL') r=r.filter(r=>r['Channel']===S.channel);
   return r;
 }
-
-function filterVideos(rows) {
-  let r = rows;
-  if (S.channel !== 'ALL') r = r.filter(r => r['Channel'] === S.channel);
-  // Filter by publish date range
-  if (S.from || S.to) {
-    r = r.filter(row => {
-      const pub = row['Published At'] ? new Date(row['Published At']) : null;
-      if (!pub || isNaN(pub)) return true;
-      const yr = pub.getFullYear(), mo = pub.getMonth()+1;
-      return inRange(yr, mo);
-    });
-  }
+function filterVids(rows) {
+  let r=S.channel!=='ALL'?rows.filter(r=>r['Channel']===S.channel):rows;
+  if (S.from||S.to) r=r.filter(row=>{
+    const pub=row['Published At']?new Date(row['Published At']):null;
+    if (!pub||isNaN(pub)) return true;
+    return inRange(pub.getFullYear(),pub.getMonth()+1);
+  });
   return r;
 }
+function agg(rows,col){return rows.reduce((s,r)=>s+(parseFloat(r[col])||0),0);}
+function avg(rows,col){return rows.length?agg(rows,col)/rows.length:0;}
+function fmtNum(n){n=Math.round(n);return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n.toString();}
+function fmtD(n){return '$'+Math.round(n).toLocaleString();}
+function pct(a,b){return b?(((a-b)/b)*100):null;}
+function fmtPct(p){if(p===null)return '—';return (p>=0?'+':'')+p.toFixed(1)+'%';}
+function chColor(name){if(!S.data)return '#888';const i=S.data.summary.findIndex(r=>r['Channel']===name);return i>=0?PALETTE[i%PALETTE.length]:'#888';}
 
-function chColor(name) {
-  if (!S.data) return '#888';
-  const i = S.data.summary.findIndex(r => r['Channel'] === name);
-  return i >= 0 ? CH_COLORS[i % CH_COLORS.length] : '#888';
+function sortPeriods(periods) {
+  return [...periods].sort((a,b)=>{
+    const [am,ay]=a.split(' '); const [bm,by]=b.split(' ');
+    return (+ay-+by)||(MONTH_NAMES.indexOf(am)-MONTH_NAMES.indexOf(bm));
+  });
 }
 
-function agg(rows, col) { return rows.reduce((s,r) => s + (parseFloat(r[col])||0), 0); }
-function avg(rows, col) { return rows.length ? agg(rows,col)/rows.length : 0; }
-function fmt(n) { n=Math.round(n); return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n.toString(); }
-function fmtD(n) { return '$'+Math.round(n).toLocaleString(); }
-function pct(a,b) { if (!b) return null; return ((a-b)/b*100); }
-function badge(a,b) {
-  const p = pct(parseFloat(a)||0, parseFloat(b)||0);
-  if (p===null) return '';
-  return `<span class="badge ${p>=0?'up':'dn'}">${p>=0?'+':''}${p.toFixed(1)}%</span>`;
-}
+function destroyCharts(){Object.values(CHARTS).forEach(c=>{try{c.destroy()}catch(e){}});CHARTS={};}
+function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Fetching your channel data...</p></div>';}
+function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box"><h3>Connection Error</h3><p>${msg}</p><br><button class="btn-gold" style="margin-top:16px;padding:10px 24px;font-size:14px" onclick="document.getElementById('setupModal').style.display='flex'">Update Settings</button></div>`;}
 
-// ── FILTER BAR ────────────────────────────────────────────────
-function filterBar() {
-  return `<div class="filter-bar">
+// YEARS in data
+function getYears(){return [...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].map(Number).sort();}
+
+// FILTER BAR HTML
+function filterBarHTML(){
+  const years=getYears();
+  return `<div class="filter-strip">
     <label>From</label>
     <input type="month" value="${S.from}" onchange="S.from=this.value;renderPage()">
-    <span class="filter-sep">→</span>
+    <span class="arrow-sep">→</span>
     <label>To</label>
     <input type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
-    <div style="display:flex;gap:6px;margin-left:4px">
-      ${[...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].sort().map(yr =>
-        `<button class="q-btn" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`
-      ).join('')}
-      <button class="q-btn" onclick="S.from='';S.to='';renderPage()">All</button>
-    </div>
+    ${years.map(yr=>`<button class="yr-pill${isYearSelected(yr)?' sel':''}" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`).join('')}
+    <button class="yr-pill${!S.from?'':''}" onclick="S.from='';S.to='';renderPage()">All</button>
   </div>`;
 }
+function isYearSelected(yr){return S.from===`${yr}-01`&&S.to===`${yr}-12`;}
+function setQuick(f,t){S.from=f;S.to=t;renderPage();}
 
-function setQuick(f,t) { S.from=f; S.to=t; renderPage(); }
-
-// ── CHART OPTS ────────────────────────────────────────────────
-function cOpts(cb, extra={}) {
-  return { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},...(extra.plugins||{})},
+// CHART DEFAULT OPTIONS
+function cOpts(yFmt,extra={}){
+  return {responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e38',titleColor:'#fff',bodyColor:'#9494b8',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,cornerRadius:8,...(extra.tooltip||{})},...(extra.plugins||{})},
     scales:{
-      y:{ticks:{callback:cb,font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}},
-      x:{ticks:{font:{size:10},color:'#6b6b80',maxRotation:45,autoSkip:true,maxTicksLimit:14},grid:{display:false},border:{display:false}},
+      y:{ticks:{callback:yFmt,font:{size:11,family:"'JetBrains Mono'"},color:'#6a6a8a'},grid:{color:'rgba(255,255,255,0.04)'},border:{display:false},...(extra.y||{})},
+      x:{ticks:{font:{size:10,family:"'JetBrains Mono'"},color:'#6a6a8a',maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false},border:{display:false},...(extra.x||{})},
       ...(extra.scales||{})
-    }, ...extra };
+    },...extra};
 }
-
-function legend(id, items) {
-  document.getElementById(id).innerHTML = items.map(([label,color]) =>
-    `<span class="leg-item"><span class="leg-sq" style="background:${color}"></span>${label}</span>`
-  ).join('');
-}
-
-function destroyCharts() { Object.values(CHARTS).forEach(c=>{try{c.destroy()}catch(e){}}); CHARTS={}; }
-
-// ── STATES ────────────────────────────────────────────────────
-function setLoading() { document.getElementById('mainContent').innerHTML = '<div class="state-box"><div class="spinner"></div><h3>Loading data...</h3></div>'; }
-function showError(msg) { document.getElementById('mainContent').innerHTML = `<div class="state-box"><h3>Connection error</h3><p>${msg}</p><br><button class="sync-btn" style="width:auto;padding:8px 20px;margin-top:8px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`; }
 
 // ── RENDER ────────────────────────────────────────────────────
-function renderPage() {
+function renderPage(){
   if (!S.data) return;
   destroyCharts();
-  const pages = { overview:renderOverview, monthly:renderMonthly, yoy:renderYoY, pervideo:renderPerVideo, videos:renderVideos };
-  (pages[S.page] || renderOverview)();
+  ({overview:renderOverview,yoy:renderYoY,monthly:renderMonthly,pervideo:renderPerVideo,videos:renderVideos}[S.page]||renderOverview)();
 }
 
-// ── OVERVIEW ──────────────────────────────────────────────────
+// ── OVERVIEW / COMMAND CENTER ─────────────────────────────────
 function renderOverview() {
-  const sum = S.channel === 'ALL' ? S.data.summary : S.data.summary.filter(r=>r['Channel']===S.channel);
-  const mo  = filterMonthly(S.data.monthly);
-  const chs = S.channel === 'ALL'
-    ? S.data.summary.map(r=>r['Channel']).filter(Boolean)
-    : [S.channel];
+  const sum = S.channel==='ALL'?S.data.summary:S.data.summary.filter(r=>r['Channel']===S.channel);
+  const mo  = filterMo(S.data.monthly);
+  const chs = S.channel==='ALL'?S.data.summary.map(r=>r['Channel']).filter(Boolean):[S.channel];
+  const years = getYears();
 
-  const tv   = agg(sum,'Total Views');
-  const twh  = agg(sum,'Total Watch Hours');
-  const tr   = agg(sum,'Total Revenue ($)');
-  const ts   = agg(sum,'Total Subscribers');
-  const ti   = agg(sum,'Total Impressions');
-  const actr = avg(sum,'Avg CTR (%)');
-  const aret = avg(sum,'Avg Retention %');
-  const vc   = agg(sum,'Video Count');
+  const tv=agg(sum,'Total Views'), twh=agg(sum,'Total Watch Hours');
+  const tr=agg(sum,'Total Revenue ($)'), ts=agg(sum,'Total Subscribers');
+  const ti=agg(sum,'Total Impressions'), actr=avg(sum,'Avg CTR (%)');
+  const aret=avg(sum,'Avg Retention %');
 
-  // periods for chart
-  const periods = [...new Set(mo.map(r=>r['Period']))].sort((a,b)=>{
-    const [am,ay]=a.split(' '); const [bm,by]=b.split(' ');
-    const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return (+ay-+by)||(ms.indexOf(am)-ms.indexOf(bm));
+  const periods=sortPeriods([...new Set(mo.map(r=>r['Period']))]);
+
+  // YoY for hero deltas (latest 2 years)
+  const byYearCh={};
+  S.data.monthly.forEach(r=>{
+    const key=`${r['Year']}|${r['Channel']}`;
+    if(!byYearCh[key])byYearCh[key]={views:0,rev:0,subs:0,imp:0};
+    byYearCh[key].views+=parseFloat(r['Views'])||0;
+    byYearCh[key].rev+=parseFloat(r['Revenue ($)'])||0;
+    byYearCh[key].subs+=parseFloat(r['Subscribers'])||0;
+    byYearCh[key].imp+=parseFloat(r['Impressions'])||0;
   });
+  const lastTwo=years.slice(-2);
+  const totByYear=yr=>({
+    views:chs.reduce((s,ch)=>s+((byYearCh[`${yr}|${ch}`]||{}).views||0),0),
+    rev:chs.reduce((s,ch)=>s+((byYearCh[`${yr}|${ch}`]||{}).rev||0),0),
+    subs:chs.reduce((s,ch)=>s+((byYearCh[`${yr}|${ch}`]||{}).subs||0),0),
+  });
+  const [prev,curr]=lastTwo.length===2?[totByYear(lastTwo[0]),totByYear(lastTwo[1])]:[null,null];
+
+  function deltaHTML(curr,prev,label){
+    if(!prev||!curr)return '';
+    const p=pct(curr,prev);
+    const up=p>=0;
+    return `<div class="stat-delta"><span class="delta-dot" style="background:${up?'var(--green)':'var(--red)'}"></span><span class="${up?'delta-up':'delta-dn'}">${fmtPct(p)} vs ${lastTwo[0]}</span></div>`;
+  }
 
   document.getElementById('mainContent').innerHTML = `
-    <div class="page-header">
-      <div><div class="page-title">${S.channel==='ALL'?'All Channels':S.channel}</div>
-      <div class="page-sub">${sum.length} channel${sum.length!==1?'s':''} · filtered by publish date</div></div>
+    <div class="hero fade-up">
+      <div class="hero-eyebrow">Command Center · ${S.channel==='ALL'?'All Channels':S.channel}</div>
+      <div class="hero-title">${S.channel==='ALL'?'Portfolio Overview':S.channel}</div>
+      <div class="hero-sub">${sum.length} channel${sum.length!==1?'s':''} · ${agg(sum,'Video Count').toLocaleString()} videos indexed</div>
+      <div class="hero-actions">${filterBarHTML()}</div>
     </div>
-    ${filterBar()}
-    <div class="metrics">
-      <div class="m-card c1"><div class="m-label">Total views</div><div class="m-val">${fmt(tv)}</div></div>
-      <div class="m-card c2"><div class="m-label">Watch hours</div><div class="m-val">${fmt(twh)}</div></div>
-      <div class="m-card c3"><div class="m-label">Revenue</div><div class="m-val">${fmtD(tr)}</div></div>
-      <div class="m-card c4"><div class="m-label">Impressions</div><div class="m-val">${fmt(ti)}</div></div>
-      <div class="m-card c5"><div class="m-label">Avg CTR</div><div class="m-val">${actr.toFixed(1)}%</div></div>
-      <div class="m-card c6"><div class="m-label">Avg retention</div><div class="m-val">${aret.toFixed(1)}%</div></div>
-      <div class="m-card c7"><div class="m-label">Subs gained</div><div class="m-val">${fmt(ts)}</div></div>
-      <div class="m-card c8"><div class="m-label">Videos</div><div class="m-val">${fmt(vc)}</div></div>
-    </div>
-    <div class="charts-grid">
-      <div class="chart-card wide">
-        <div class="card-title">Views over time</div>
-        <div class="legend" id="legV"></div>
-        <div style="position:relative;height:240px"><canvas id="cViews" role="img" aria-label="Views over time by channel">Views over time</canvas></div>
+
+    <div class="content">
+      <div class="stat-hero fade-up fade-up-1">
+        <div class="stat-block s1">
+          <div class="stat-eyebrow">Total views</div>
+          <div class="stat-num">${fmtNum(tv)}</div>
+          ${curr?deltaHTML(curr.views,prev.views,'views'):''}
+        </div>
+        <div class="stat-block s2">
+          <div class="stat-eyebrow">Watch hours</div>
+          <div class="stat-num">${fmtNum(twh)}</div>
+          <div class="stat-delta"><span class="delta-dot" style="background:var(--electric)"></span><span style="color:var(--muted2)">across all content</span></div>
+        </div>
+        <div class="stat-block s3">
+          <div class="stat-eyebrow">Total revenue</div>
+          <div class="stat-num">${fmtD(tr)}</div>
+          ${curr?deltaHTML(curr.rev,prev.rev,'revenue'):''}
+        </div>
+        <div class="stat-block s4">
+          <div class="stat-eyebrow">Subscribers</div>
+          <div class="stat-num">${fmtNum(ts)}</div>
+          ${curr?deltaHTML(curr.subs,prev.subs,'subs'):''}
+        </div>
+        <div class="stat-block s5">
+          <div class="stat-eyebrow">Avg CTR</div>
+          <div class="stat-num">${actr.toFixed(1)}<span class="stat-unit">%</span></div>
+        </div>
+        <div class="stat-block s6">
+          <div class="stat-eyebrow">Avg retention</div>
+          <div class="stat-num">${aret.toFixed(1)}<span class="stat-unit">%</span></div>
+        </div>
       </div>
-      <div class="chart-card">
-        <div class="card-title">CTR by month</div>
-        <div class="legend" id="legCTR"></div>
-        <div style="position:relative;height:200px"><canvas id="cCTR" role="img" aria-label="CTR by month">CTR by month</canvas></div>
+
+      <div class="section-hd fade-up fade-up-2">
+        <div class="section-title">Channel Performance</div>
+        <div class="section-rule"></div>
+        <div class="section-count">${sum.length} channels</div>
       </div>
-      <div class="chart-card">
-        <div class="card-title">Avg retention by month</div>
-        <div class="legend" id="legRet"></div>
-        <div style="position:relative;height:200px"><canvas id="cRet" role="img" aria-label="Retention by month">Retention by month</canvas></div>
+      <div class="ch-cards fade-up fade-up-2" id="chCards"></div>
+
+      <div class="section-hd fade-up fade-up-3">
+        <div class="section-title">Views Trajectory</div>
+        <div class="section-rule"></div>
+        <div class="leg" id="legViews"></div>
       </div>
-    </div>
-    <div class="sec-title">Channel summary</div>
-    <div class="tbl-wrap">
-      <div class="tbl-head" style="grid-template-columns:2fr 80px 80px 80px 80px 70px 70px 60px">
-        <span>Channel</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span><span>Videos</span>
+      <div class="charts-grid fade-up fade-up-3">
+        <div class="chart-card wide">
+          <div class="card-hd"><div class="card-title">Monthly views — all channels</div></div>
+          <div style="position:relative;height:260px"><canvas id="cViews" role="img" aria-label="Monthly views trend">Monthly views</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><div class="card-title">CTR trend</div></div>
+          <div class="leg" id="legCTR" style="margin-bottom:12px"></div>
+          <div style="position:relative;height:200px"><canvas id="cCTR" role="img" aria-label="CTR trend">CTR</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><div class="card-title">Avg retention</div></div>
+          <div class="leg" id="legRet" style="margin-bottom:12px"></div>
+          <div style="position:relative;height:200px"><canvas id="cRet" role="img" aria-label="Retention trend">Retention</canvas></div>
+        </div>
       </div>
-      ${sum.sort((a,b)=>(parseFloat(b['Total Views'])||0)-(parseFloat(a['Total Views'])||0)).map(r=>{
-        const color = chColor(r['Channel']);
-        const ret = parseFloat(r['Avg Retention %'])||0;
-        return `<div class="tbl-row" style="grid-template-columns:2fr 80px 80px 80px 80px 70px 70px 60px">
-          <div style="display:flex;align-items:center;gap:8px"><span class="ch-dot" style="background:${color}"></span><span class="cell-title">${r['Channel']}</span></div>
-          <div class="mono">${fmt(parseFloat(r['Total Views'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Total Watch Hours'])||0)}</div>
-          <div class="mono">${fmtD(parseFloat(r['Total Revenue ($)'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Total Impressions'])||0)}</div>
-          <div class="mono">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
-          <div><div class="mono">${ret.toFixed(1)}%</div><div class="ret-bar-bg"><div class="ret-bar-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
-          <div class="mono">${r['Video Count']||'—'}</div>
-        </div>`;
-      }).join('')}
     </div>`;
 
-  legend('legV', chs.map(ch=>[ch.split(' ')[0], chColor(ch)]));
-  CHARTS.views = new Chart(document.getElementById('cViews'), {
+  // Channel cards
+  const maxViews=Math.max(...sum.map(r=>parseFloat(r['Total Views'])||0));
+  document.getElementById('chCards').innerHTML = sum
+    .sort((a,b)=>(parseFloat(b['Total Views'])||0)-(parseFloat(a['Total Views'])||0))
+    .map(r=>{
+      const ch=r['Channel']; const color=chColor(ch);
+      const initials=ch.split(' ').map(w=>w[0]).join('').substring(0,3).toUpperCase();
+      const v=parseFloat(r['Total Views'])||0;
+      const wh=parseFloat(r['Total Watch Hours'])||0;
+      const rev=parseFloat(r['Total Revenue ($)'])||0;
+      const ctr=parseFloat(r['Avg CTR (%)'])||0;
+      const ret=parseFloat(r['Avg Retention %'])||0;
+      const vc=parseFloat(r['Video Count'])||0;
+      const barPct=maxViews?Math.round((v/maxViews)*100):0;
+
+      // YoY for this channel
+      const chYoys=lastTwo.length===2?lastTwo.map(yr=>byYearCh[`${yr}|${ch}`]||{}):[];
+      const viewsP=chYoys.length===2?pct(chYoys[1].views||0,chYoys[0].views||1):null;
+      const revP  =chYoys.length===2?pct(chYoys[1].rev||0,  chYoys[0].rev||1  ):null;
+
+      return `<div class="ch-perf-card">
+        <div class="ch-perf-header">
+          <div class="ch-perf-avatar" style="background:${color}22;color:${color}">${initials}</div>
+          <div>
+            <div class="ch-perf-name">${ch}</div>
+            <div class="ch-perf-handle">${vc.toLocaleString()} videos indexed</div>
+          </div>
+        </div>
+        <div class="ch-perf-body">
+          <div class="ch-stat-row">
+            <div class="ch-stat"><div class="ch-stat-val" style="color:${color}">${fmtNum(v)}</div><div class="ch-stat-lbl">Views</div></div>
+            <div class="ch-stat"><div class="ch-stat-val">${fmtNum(wh)}</div><div class="ch-stat-lbl">Watch hrs</div></div>
+            <div class="ch-stat"><div class="ch-stat-val">${fmtD(rev)}</div><div class="ch-stat-lbl">Revenue</div></div>
+          </div>
+          <div class="ch-stat-row">
+            <div class="ch-stat"><div class="ch-stat-val">${ctr.toFixed(1)}%</div><div class="ch-stat-lbl">CTR</div></div>
+            <div class="ch-stat"><div class="ch-stat-val">${ret.toFixed(1)}%</div><div class="ch-stat-lbl">Retention</div></div>
+            <div class="ch-stat"><div class="ch-stat-val">${fmtD(rev/Math.max(vc,1))}</div><div class="ch-stat-lbl">Rev/Video</div></div>
+          </div>
+          <div class="ch-perf-bar"><div class="ch-perf-bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+          ${viewsP!==null||revP!==null?`<div class="ch-yoy">
+            ${viewsP!==null?`<span class="yoy-tag ${viewsP>=0?'yoy-up':'yoy-dn'}">Views ${fmtPct(viewsP)}</span>`:''}
+            ${revP!==null?`<span class="yoy-tag ${revP>=0?'yoy-up':'yoy-dn'}">Rev ${fmtPct(revP)}</span>`:''}
+            <span class="yoy-tag yoy-neu">${lastTwo[0]}→${lastTwo[1]}</span>
+          </div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+  // Charts
+  function mkLeg(id,items){document.getElementById(id).innerHTML=items.map(([l,c])=>`<span class="leg-item"><span class="leg-bar" style="background:${c}"></span>${l}</span>`).join('');}
+
+  mkLeg('legViews',chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
+  CHARTS.views=new Chart(document.getElementById('cViews'),{
     type:'line',
-    data:{ labels:periods, datasets: chs.map(ch=>({
+    data:{labels:periods,datasets:chs.map(ch=>({
       label:ch,
-      data: periods.map(p=>{ const r=mo.find(r=>r['Channel']===ch&&r['Period']===p); return r?parseFloat(r['Views'])||0:null; }),
-      borderColor:chColor(ch), backgroundColor:chColor(ch)+'18', fill:chs.length===1, tension:0.4, pointRadius:3, borderWidth:2, spanGaps:true
+      data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),
+      borderColor:chColor(ch),backgroundColor:chColor(ch)+'15',fill:chs.length===1,tension:0.4,pointRadius:2,pointHoverRadius:5,borderWidth:2,spanGaps:true
     }))},
-    options: cOpts(v=>fmt(v))
+    options:cOpts(v=>fmtNum(v))
   });
 
-  legend('legCTR', chs.map(ch=>[ch.split(' ')[0], chColor(ch)]));
-  CHARTS.ctr = new Chart(document.getElementById('cCTR'), {
+  mkLeg('legCTR',chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
+  CHARTS.ctr=new Chart(document.getElementById('cCTR'),{
     type:'line',
-    data:{ labels:periods, datasets: chs.map(ch=>({
+    data:{labels:periods,datasets:chs.map(ch=>({
       label:ch,
-      data: periods.map(p=>{ const r=mo.find(r=>r['Channel']===ch&&r['Period']===p); return r?parseFloat(r['Avg CTR (%)'])||null:null; }),
-      borderColor:chColor(ch), backgroundColor:'transparent', tension:0.4, pointRadius:3, borderWidth:2, spanGaps:true
+      data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),
+      borderColor:chColor(ch),backgroundColor:'transparent',tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true
     }))},
-    options: cOpts(v=>v.toFixed(1)+'%')
+    options:cOpts(v=>v.toFixed(1)+'%')
   });
 
-  legend('legRet', chs.map(ch=>[ch.split(' ')[0], chColor(ch)]));
-  CHARTS.ret = new Chart(document.getElementById('cRet'), {
+  mkLeg('legRet',chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
+  CHARTS.ret=new Chart(document.getElementById('cRet'),{
     type:'line',
-    data:{ labels:periods, datasets: chs.map(ch=>({
+    data:{labels:periods,datasets:chs.map(ch=>({
       label:ch,
-      data: periods.map(p=>{ const r=mo.find(r=>r['Channel']===ch&&r['Period']===p); return r?parseFloat(r['Avg Retention %'])||null:null; }),
-      borderColor:chColor(ch), backgroundColor:'transparent', tension:0.4, pointRadius:3, borderWidth:2, spanGaps:true
+      data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg Retention %'])||null:null;}),
+      borderColor:chColor(ch),backgroundColor:'transparent',tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true
     }))},
-    options: cOpts(v=>v.toFixed(1)+'%')
+    options:cOpts(v=>v.toFixed(1)+'%')
   });
 }
 
-// ── MONTHLY TRENDS ────────────────────────────────────────────
-function renderMonthly() {
-  const mo = filterMonthly(S.data.monthly);
-  const chs = S.channel==='ALL' ? [...new Set(mo.map(r=>r['Channel']))] : [S.channel];
-  const periods = [...new Set(mo.map(r=>r['Period']))].sort((a,b)=>{
-    const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const [am,ay]=a.split(' '); const [bm,by]=b.split(' ');
-    return (+ay-+by)||(ms.indexOf(am)-ms.indexOf(bm));
-  });
-
-  document.getElementById('mainContent').innerHTML = `
-    <div class="page-header"><div>
-      <div class="page-title">Monthly Trends</div>
-      <div class="page-sub">${S.channel==='ALL'?'All channels':S.channel}</div>
-    </div></div>
-    ${filterBar()}
-    <div class="charts-grid">
-      <div class="chart-card wide">
-        <div class="card-title">Views by month</div>
-        <div class="legend" id="legMV"></div>
-        <div style="position:relative;height:230px"><canvas id="mViews" role="img" aria-label="Monthly views">Monthly views</canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="card-title">Impressions by month</div>
-        <div class="legend" id="legMI"></div>
-        <div style="position:relative;height:200px"><canvas id="mImp" role="img" aria-label="Monthly impressions">Monthly impressions</canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="card-title">CTR by month</div>
-        <div class="legend" id="legMC"></div>
-        <div style="position:relative;height:200px"><canvas id="mCTR" role="img" aria-label="Monthly CTR">Monthly CTR</canvas></div>
-      </div>
-    </div>
-    <div class="sec-title">Monthly data</div>
-    <div class="tbl-wrap">
-      <div class="tbl-head" style="grid-template-columns:1.2fr 1fr 70px 80px 80px 80px 80px 70px 70px 60px">
-        <span>Channel</span><span>Period</span><span>Videos</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span><span>Subs</span>
-      </div>
-      ${mo.sort((a,b)=>{
-        const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const [am,ay]=(a['Period']||'').split(' '); const [bm,by]=(b['Period']||'').split(' ');
-        return (+by-+ay)||(ms.indexOf(bm)-ms.indexOf(am));
-      }).map(r=>{
-        const color=chColor(r['Channel']); const ret=parseFloat(r['Avg Retention %'])||0;
-        return `<div class="tbl-row" style="grid-template-columns:1.2fr 1fr 70px 80px 80px 80px 80px 70px 70px 60px">
-          <div style="display:flex;align-items:center;gap:6px"><span class="ch-dot" style="background:${color}"></span><span class="cell-title">${r['Channel']}</span></div>
-          <div class="mono" style="color:var(--muted)">${r['Period']}</div>
-          <div class="mono">${r['Video Count']||0}</div>
-          <div class="mono">${fmt(parseFloat(r['Views'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Watch Hours'])||0)}</div>
-          <div class="mono">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Impressions'])||0)}</div>
-          <div class="mono">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
-          <div><div class="mono">${ret.toFixed(1)}%</div><div class="ret-bar-bg"><div class="ret-bar-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
-          <div class="mono">${fmt(parseFloat(r['Subscribers'])||0)}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-
-  const ds = chs.map(ch=>({
-    label:ch,
-    data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Views'])||0:null;}),
-    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:chs.length===1,tension:0.4,pointRadius:3,borderWidth:2,spanGaps:true
-  }));
-  legend('legMV', chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
-  CHARTS.mv = new Chart(document.getElementById('mViews'),{type:'line',data:{labels:periods,datasets:ds},options:cOpts(v=>fmt(v))});
-
-  legend('legMI', chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
-  CHARTS.mi = new Chart(document.getElementById('mImp'),{type:'line',data:{labels:periods,datasets:chs.map(ch=>({
-    label:ch,data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Impressions'])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:'transparent',tension:0.4,pointRadius:3,borderWidth:2,spanGaps:true
-  }))},options:cOpts(v=>fmt(v))});
-
-  legend('legMC', chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
-  CHARTS.mc = new Chart(document.getElementById('mCTR'),{type:'line',data:{labels:periods,datasets:chs.map(ch=>({
-    label:ch,data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:'transparent',tension:0.4,pointRadius:3,borderWidth:2,spanGaps:true
-  }))},options:cOpts(v=>v.toFixed(1)+'%')});
-}
-
-// ── YEAR OVER YEAR ────────────────────────────────────────────
+// ── YOY ──────────────────────────────────────────────────────
 function renderYoY() {
-  const mo   = S.data.monthly;
-  const years = [...new Set(mo.map(r=>r['Year']).filter(Boolean))].map(Number).sort();
-  const chs  = S.channel==='ALL' ? [...new Set(mo.map(r=>r['Channel']))] : [S.channel];
+  const mo=S.data.monthly;
+  const years=getYears();
+  const chs=S.channel==='ALL'?[...new Set(mo.map(r=>r['Channel']))]:[S.channel];
 
-  // Aggregate by year+channel
-  const byYearCh = {};
-  mo.forEach(r => {
-    const key = `${r['Year']}|${r['Channel']}`;
-    if (!byYearCh[key]) byYearCh[key] = {yr:+r['Year'],ch:r['Channel'],views:0,wh:0,rev:0,imp:0,ctrSum:0,retSum:0,subs:0,count:0};
-    const d = byYearCh[key];
+  const byYC={};
+  mo.forEach(r=>{
+    const key=`${r['Year']}|${r['Channel']}`;
+    if(!byYC[key])byYC[key]={yr:+r['Year'],ch:r['Channel'],views:0,wh:0,rev:0,imp:0,subs:0,ctrSum:0,retSum:0,count:0};
+    const d=byYC[key];
     d.views+=parseFloat(r['Views'])||0; d.wh+=parseFloat(r['Watch Hours'])||0;
     d.rev+=parseFloat(r['Revenue ($)'])||0; d.imp+=parseFloat(r['Impressions'])||0;
-    d.ctrSum+=parseFloat(r['Avg CTR (%)'])||0; d.retSum+=parseFloat(r['Avg Retention %'])||0;
-    d.subs+=parseFloat(r['Subscribers'])||0; d.count++;
+    d.subs+=parseFloat(r['Subscribers'])||0;
+    d.ctrSum+=parseFloat(r['Avg CTR (%)'])||0; d.retSum+=parseFloat(r['Avg Retention %'])||0; d.count++;
   });
 
-  const get = (yr,ch,key) => { const d=byYearCh[`${yr}|${ch}`]; return d?d[key]||0:0; };
-  const getAvg = (yr,ch,key) => { const d=byYearCh[`${yr}|${ch}`]; return d&&d.count?(d[key]/d.count):0; };
+  const get=(yr,ch,k)=>(byYC[`${yr}|${ch}`]||{})[k]||0;
+  const getA=(yr,ch,k)=>{const d=byYC[`${yr}|${ch}`];return d&&d.count?d[k]/d.count:0;};
 
-  // Total rows
-  const totals = years.map(yr => ({
-    yr,
-    views: chs.reduce((s,ch)=>s+get(yr,ch,'views'),0),
-    rev:   chs.reduce((s,ch)=>s+get(yr,ch,'rev'),0),
-    subs:  chs.reduce((s,ch)=>s+get(yr,ch,'subs'),0),
-    imp:   chs.reduce((s,ch)=>s+get(yr,ch,'imp'),0),
-  }));
+  const totals=years.map(yr=>({yr,views:chs.reduce((s,ch)=>s+get(yr,ch,'views'),0),rev:chs.reduce((s,ch)=>s+get(yr,ch,'rev'),0),subs:chs.reduce((s,ch)=>s+get(yr,ch,'subs'),0)}));
+
+  const cols=`2fr ${years.map(()=>'90px 90px').join(' ')}`;
 
   document.getElementById('mainContent').innerHTML = `
-    <div class="page-header"><div>
-      <div class="page-title">Year-over-Year</div>
-      <div class="page-sub">${years.join(' vs ')}</div>
-    </div></div>
-    <div class="metrics">
-      ${years.map((yr,i)=>{
-        const t=totals[i]; const prev=totals[i-1];
-        return `<div class="m-card c${(i%4)+1}">
-          <div class="m-label">Views ${yr}</div>
-          <div class="m-val">${fmt(t.views)}</div>
-          ${prev?`<div class="m-sub">${badge(t.views,prev.views)} vs ${prev.yr}</div>`:''}
-        </div>`;
-      }).join('')}
-      ${years.map((yr,i)=>{
-        const t=totals[i]; const prev=totals[i-1];
-        return `<div class="m-card c${(i%4)+5}">
-          <div class="m-label">Revenue ${yr}</div>
-          <div class="m-val">${fmtD(t.rev)}</div>
-          ${prev?`<div class="m-sub">${badge(t.rev,prev.rev)} vs ${prev.yr}</div>`:''}
-        </div>`;
-      }).join('')}
+    <div class="hero fade-up">
+      <div class="hero-eyebrow">Year-over-Year Analysis</div>
+      <div class="hero-title">Growth Report</div>
+      <div class="hero-sub">${years.join(' · ')} · ${chs.length} channel${chs.length!==1?'s':''}</div>
     </div>
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="card-title">Views by year</div>
-        <div style="position:relative;height:220px"><canvas id="yViews" role="img" aria-label="Views by year grouped bar">YoY views</canvas></div>
+    <div class="content">
+      <div class="stat-hero fade-up fade-up-1">
+        ${totals.map((t,i)=>{
+          const prev=totals[i-1];
+          const vP=prev?pct(t.views,prev.views):null;
+          const rP=prev?pct(t.rev,prev.rev):null;
+          return `
+          <div class="stat-block s${(i%6)+1}">
+            <div class="stat-eyebrow">Views ${t.yr}</div>
+            <div class="stat-num">${fmtNum(t.views)}</div>
+            ${vP!==null?`<div class="stat-delta"><span class="delta-dot" style="background:${vP>=0?'var(--green)':'var(--red)'}"></span><span class="${vP>=0?'delta-up':'delta-dn'}">${fmtPct(vP)} YoY</span></div>`:''}
+          </div>
+          <div class="stat-block s${(i%6)+2}">
+            <div class="stat-eyebrow">Revenue ${t.yr}</div>
+            <div class="stat-num">${fmtD(t.rev)}</div>
+            ${rP!==null?`<div class="stat-delta"><span class="delta-dot" style="background:${rP>=0?'var(--green)':'var(--red)'}"></span><span class="${rP>=0?'delta-up':'delta-dn'}">${fmtPct(rP)} YoY</span></div>`:''}
+          </div>`;
+        }).join('')}
       </div>
-      <div class="chart-card">
-        <div class="card-title">Revenue by year</div>
-        <div style="position:relative;height:220px"><canvas id="yRev" role="img" aria-label="Revenue by year grouped bar">YoY revenue</canvas></div>
+
+      <div class="charts-grid fade-up fade-up-2">
+        <div class="chart-card">
+          <div class="card-hd"><div class="card-title">Views by year</div>
+          <div class="leg" id="yLeg1"></div></div>
+          <div style="position:relative;height:240px"><canvas id="yViews" role="img" aria-label="Views by year">YoY views</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><div class="card-title">Revenue by year</div>
+          <div class="leg" id="yLeg2"></div></div>
+          <div style="position:relative;height:240px"><canvas id="yRev" role="img" aria-label="Revenue by year">YoY revenue</canvas></div>
+        </div>
       </div>
-    </div>
-    <div class="sec-title">Channel breakdown by year</div>
-    <div class="tbl-wrap">
-      <div class="tbl-head" style="grid-template-columns:1.5fr 60px 90px 80px 80px 80px 70px">
-        <span>Channel</span><span>Year</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>Subs</span>
+
+      <div class="section-hd fade-up fade-up-3">
+        <div class="section-title">Channel Breakdown</div>
+        <div class="section-rule"></div>
       </div>
-      ${years.flatMap(yr=>chs.map(ch=>{
-        const d=byYearCh[`${yr}|${ch}`];
-        if(!d) return '';
-        return `<div class="tbl-row" style="grid-template-columns:1.5fr 60px 90px 80px 80px 80px 70px">
-          <div style="display:flex;align-items:center;gap:8px"><span class="ch-dot" style="background:${chColor(ch)}"></span>${ch}</div>
-          <div class="mono" style="color:var(--muted)">${yr}</div>
-          <div class="mono">${fmt(d.views)}</div>
-          <div class="mono">${fmt(d.wh)}</div>
-          <div class="mono">${fmtD(d.rev)}</div>
-          <div class="mono">${fmt(d.imp)}</div>
-          <div class="mono">${fmt(d.subs)}</div>
-        </div>`;
-      })).join('')}
+      <div class="yoy-table fade-up fade-up-3">
+        <div class="yoy-thead" style="grid-template-columns:${cols}">
+          <span>Channel</span>
+          ${years.map(yr=>`<span class="yr-header">${yr} Views</span><span class="yr-header">${yr} Rev</span>`).join('')}
+        </div>
+        ${chs.map(ch=>{
+          const color=chColor(ch);
+          return `<div class="yoy-trow" style="grid-template-columns:${cols}">
+            <div class="ch-tag"><div class="ch-tag-dot" style="background:${color}"></div><div class="ch-tag-name">${ch}</div></div>
+            ${years.map((yr,i)=>{
+              const v=get(yr,ch,'views'), r=get(yr,ch,'rev');
+              const prevYr=years[i-1];
+              const vP=prevYr?pct(v,get(prevYr,ch,'views')):null;
+              const rP=prevYr?pct(r,get(prevYr,ch,'rev')):null;
+              return `
+              <div>
+                <div class="num-cell">${fmtNum(v)}</div>
+                ${vP!==null?`<div class="delta-cell ${vP>=0?'delta-up':'delta-dn'}">${fmtPct(vP)}</div>`:''}
+              </div>
+              <div>
+                <div class="num-cell">${fmtD(r)}</div>
+                ${rP!==null?`<div class="delta-cell ${rP>=0?'delta-up':'delta-dn'}">${fmtPct(rP)}</div>`:''}
+              </div>`;
+            }).join('')}
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
 
-  const yColors = ['#5b6ef5','#3dd68c','#f5a623','#c77dff'];
-  const chLabels = chs.map(ch=>ch.split(' ')[0]);
-  CHARTS.yv = new Chart(document.getElementById('yViews'),{
-    type:'bar',
-    data:{labels:chLabels,datasets:years.map((yr,i)=>({
-      label:String(yr),data:chs.map(ch=>get(yr,ch,'views')),backgroundColor:yColors[i%yColors.length],borderRadius:4
-    }))},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmt(v),font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}},x:{ticks:{font:{size:10},color:'#6b6b80'},grid:{display:false},border:{display:false}}}}
+  const yColors=['#f0b429','#00e5ff','#00e096','#a78bfa'];
+  const chLabels=chs.map(ch=>ch.length>14?ch.substring(0,12)+'…':ch);
+  function mkLeg(id,items){document.getElementById(id).innerHTML=items.map(([l,c])=>`<span class="leg-item"><span class="leg-bar" style="background:${c}"></span>${l}</span>`).join('');}
+  mkLeg('yLeg1',years.map((yr,i)=>[String(yr),yColors[i%yColors.length]]));
+  mkLeg('yLeg2',years.map((yr,i)=>[String(yr),yColors[i%yColors.length]]));
+
+  const barOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e38',titleColor:'#fff',bodyColor:'#9494b8',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,cornerRadius:8}},scales:{y:{ticks:{font:{size:11,family:"'JetBrains Mono'"},color:'#6a6a8a'},grid:{color:'rgba(255,255,255,0.04)'},border:{display:false}},x:{ticks:{font:{size:10,family:"'JetBrains Mono'"},color:'#6a6a8a'},grid:{display:false},border:{display:false}}}};
+
+  CHARTS.yv=new Chart(document.getElementById('yViews'),{type:'bar',
+    data:{labels:chLabels,datasets:years.map((yr,i)=>({label:String(yr),data:chs.map(ch=>get(yr,ch,'views')),backgroundColor:yColors[i%yColors.length]+'cc',borderRadius:4,borderSkipped:false}))},
+    options:{...barOpts,scales:{...barOpts.scales,y:{...barOpts.scales.y,ticks:{...barOpts.scales.y.ticks,callback:v=>fmtNum(v)}}}}
   });
-  CHARTS.yr = new Chart(document.getElementById('yRev'),{
-    type:'bar',
-    data:{labels:chLabels,datasets:years.map((yr,i)=>({
-      label:String(yr),data:chs.map(ch=>get(yr,ch,'rev')),backgroundColor:yColors[i%yColors.length],borderRadius:4
-    }))},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'$'+fmt(v),font:{size:11},color:'#6b6b80'},grid:{color:'rgba(255,255,255,0.05)'},border:{display:false}},x:{ticks:{font:{size:10},color:'#6b6b80'},grid:{display:false},border:{display:false}}}}
+  CHARTS.yr=new Chart(document.getElementById('yRev'),{type:'bar',
+    data:{labels:chLabels,datasets:years.map((yr,i)=>({label:String(yr),data:chs.map(ch=>get(yr,ch,'rev')),backgroundColor:yColors[i%yColors.length]+'cc',borderRadius:4,borderSkipped:false}))},
+    options:{...barOpts,scales:{...barOpts.scales,y:{...barOpts.scales.y,ticks:{...barOpts.scales.y.ticks,callback:v=>'$'+fmtNum(v)}}}}
   });
 }
 
-// ── PER-VIDEO AVERAGES ────────────────────────────────────────
-function renderPerVideo() {
-  const pv = S.channel==='ALL' ? S.data.pervideo : S.data.pervideo.filter(r=>r['Channel']===S.channel);
-  const filtered = pv.filter(r=>inRange(+r['Year'],+r['Month']));
-  const chs = S.channel==='ALL' ? [...new Set(filtered.map(r=>r['Channel']))] : [S.channel];
-  const periods = [...new Set(filtered.map(r=>r['Period']))].sort((a,b)=>{
-    const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const [am,ay]=a.split(' '); const [bm,by]=b.split(' ');
-    return (+ay-+by)||(ms.indexOf(am)-ms.indexOf(bm));
-  });
+// ── MONTHLY ───────────────────────────────────────────────────
+function renderMonthly() {
+  const mo=filterMo(S.data.monthly);
+  const chs=S.channel==='ALL'?[...new Set(mo.map(r=>r['Channel']))]:[S.channel];
+  const periods=sortPeriods([...new Set(mo.map(r=>r['Period']))]);
 
-  document.getElementById('mainContent').innerHTML = `
-    <div class="page-header"><div>
-      <div class="page-title">Per-Video Averages</div>
-      <div class="page-sub">Average metrics per video published each month</div>
-    </div></div>
-    ${filterBar()}
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="card-title">Avg views per video</div>
-        <div class="legend" id="legPVV"></div>
-        <div style="position:relative;height:200px"><canvas id="pvViews" role="img" aria-label="Average views per video by month">Per-video views</canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="card-title">Avg revenue per video</div>
-        <div class="legend" id="legPVR"></div>
-        <div style="position:relative;height:200px"><canvas id="pvRev" role="img" aria-label="Average revenue per video by month">Per-video revenue</canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="card-title">Avg impressions per video</div>
-        <div class="legend" id="legPVI"></div>
-        <div style="position:relative;height:200px"><canvas id="pvImp" role="img" aria-label="Average impressions per video">Per-video impressions</canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="card-title">Avg CTR per video</div>
-        <div class="legend" id="legPVC"></div>
-        <div style="position:relative;height:200px"><canvas id="pvCTR" role="img" aria-label="Average CTR per video">Per-video CTR</canvas></div>
-      </div>
+  document.getElementById('mainContent').innerHTML=`
+    <div class="hero fade-up">
+      <div class="hero-eyebrow">Monthly Trends</div>
+      <div class="hero-title">Time Series</div>
+      <div class="hero-sub">${periods.length} months of data</div>
+      <div class="hero-actions">${filterBarHTML()}</div>
     </div>
-    <div class="sec-title">Per-video monthly detail</div>
-    <div class="tbl-wrap">
-      <div class="tbl-head" style="grid-template-columns:1.2fr 1fr 60px 80px 80px 80px 80px 70px 70px">
-        <span>Channel</span><span>Period</span><span>Videos</span><span>Avg views</span><span>Avg watch hrs</span><span>Avg revenue</span><span>Avg impressions</span><span>Avg CTR</span><span>Avg retention</span>
+    <div class="content">
+      <div class="charts-grid fade-up fade-up-1">
+        <div class="chart-card wide">
+          <div class="card-hd"><div class="card-title">Views over time</div><div class="leg" id="mLeg1"></div></div>
+          <div style="position:relative;height:260px"><canvas id="mViews" role="img" aria-label="Monthly views">Monthly views</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><div class="card-title">Impressions</div><div class="leg" id="mLeg2"></div></div>
+          <div style="position:relative;height:200px"><canvas id="mImp" role="img" aria-label="Monthly impressions">Impressions</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><div class="card-title">CTR %</div><div class="leg" id="mLeg3"></div></div>
+          <div style="position:relative;height:200px"><canvas id="mCTR" role="img" aria-label="Monthly CTR">CTR</canvas></div>
+        </div>
       </div>
-      ${filtered.sort((a,b)=>{
-        const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const [am,ay]=(a['Period']||'').split(' '); const [bm,by]=(b['Period']||'').split(' ');
-        return (+by-+ay)||(ms.indexOf(bm)-ms.indexOf(am));
-      }).map(r=>{
-        const color=chColor(r['Channel']);
-        return `<div class="tbl-row" style="grid-template-columns:1.2fr 1fr 60px 80px 80px 80px 80px 70px 70px">
-          <div style="display:flex;align-items:center;gap:6px"><span class="ch-dot" style="background:${color}"></span><span class="cell-title">${r['Channel']}</span></div>
-          <div class="mono" style="color:var(--muted)">${r['Period']}</div>
-          <div class="mono">${r['Video Count']||0}</div>
-          <div class="mono">${fmt(parseFloat(r['Avg Views'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Avg Watch Hours'])||0)}</div>
-          <div class="mono">${fmtD(parseFloat(r['Avg Revenue ($)'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Avg Impressions'])||0)}</div>
-          <div class="mono">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
-          <div class="mono">${(parseFloat(r['Avg Retention %'])||0).toFixed(1)}%</div>
-        </div>`;
-      }).join('')}
+      <div class="section-hd fade-up fade-up-2"><div class="section-title">Monthly Data</div><div class="section-rule"></div></div>
+      <div class="yoy-table fade-up fade-up-2">
+        <div class="yoy-thead" style="grid-template-columns:1.2fr 1fr 70px 90px 80px 90px 90px 70px 70px 60px">
+          <span>Channel</span><span>Period</span><span>Videos</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span><span>Subs</span>
+        </div>
+        ${mo.sort((a,b)=>{const [am,ay]=(a['Period']||'').split(' ');const [bm,by]=(b['Period']||'').split(' ');return(+by-+ay)||(MONTH_NAMES.indexOf(bm)-MONTH_NAMES.indexOf(am));}).map(r=>{
+          const color=chColor(r['Channel']);const ret=parseFloat(r['Avg Retention %'])||0;
+          return `<div class="yoy-trow" style="grid-template-columns:1.2fr 1fr 70px 90px 80px 90px 90px 70px 70px 60px">
+            <div class="ch-tag"><div class="ch-tag-dot" style="background:${color}"></div><span style="font-size:13px;font-weight:600">${r['Channel']}</span></div>
+            <div class="num-cell" style="color:var(--muted2)">${r['Period']}</div>
+            <div class="num-cell">${r['Video Count']||0}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Views'])||0)}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Watch Hours'])||0)}</div>
+            <div class="num-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Impressions'])||0)}</div>
+            <div class="num-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
+            <div><div class="num-cell">${ret.toFixed(1)}%</div><div class="ret-bar-bg" style="height:2px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:3px"><div style="height:100%;width:${Math.min(ret*2,100)}%;background:${color};border-radius:2px"></div></div></div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Subscribers'])||0)}</div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
 
-  const mkDs = (col, isAvg=false) => chs.map(ch=>({
-    label:ch,
-    data:periods.map(p=>{const r=filtered.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:chs.length===1?chColor(ch)+'18':'transparent',fill:chs.length===1,tension:0.4,pointRadius:3,borderWidth:2,spanGaps:true
-  }));
+  function mkLeg(id){document.getElementById(id).innerHTML=chs.map(ch=>`<span class="leg-item"><span class="leg-bar" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('');}
+  ['mLeg1','mLeg2','mLeg3'].forEach(mkLeg);
 
-  ['legPVV','legPVR','legPVI','legPVC'].forEach(id=>legend(id,chs.map(ch=>[ch.split(' ')[0],chColor(ch)])));
-  CHARTS.pvv=new Chart(document.getElementById('pvViews'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Views')},options:cOpts(v=>fmt(v))});
-  CHARTS.pvr=new Chart(document.getElementById('pvRev'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Revenue ($)')},options:cOpts(v=>'$'+v.toFixed(0))});
-  CHARTS.pvi=new Chart(document.getElementById('pvImp'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Impressions')},options:cOpts(v=>fmt(v))});
-  CHARTS.pvc=new Chart(document.getElementById('pvCTR'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:cOpts(v=>v.toFixed(1)+'%')});
+  const mkDs=(col)=>chs.map(ch=>({label:ch,data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),borderColor:chColor(ch),backgroundColor:chColor(ch)+'15',fill:chs.length===1,tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true}));
+
+  CHARTS.mv=new Chart(document.getElementById('mViews'),{type:'line',data:{labels:periods,datasets:mkDs('Views')},options:cOpts(v=>fmtNum(v))});
+  CHARTS.mi=new Chart(document.getElementById('mImp'),{type:'line',data:{labels:periods,datasets:mkDs('Impressions')},options:cOpts(v=>fmtNum(v))});
+  CHARTS.mc=new Chart(document.getElementById('mCTR'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:cOpts(v=>v.toFixed(1)+'%')});
+}
+
+// ── PER-VIDEO ─────────────────────────────────────────────────
+function renderPerVideo() {
+  const pv=(S.channel==='ALL'?S.data.pervideo:S.data.pervideo.filter(r=>r['Channel']===S.channel)).filter(r=>inRange(+r['Year'],+r['Month']));
+  const chs=S.channel==='ALL'?[...new Set(pv.map(r=>r['Channel']))]:[S.channel];
+  const periods=sortPeriods([...new Set(pv.map(r=>r['Period']))]);
+
+  document.getElementById('mainContent').innerHTML=`
+    <div class="hero fade-up">
+      <div class="hero-eyebrow">Content Efficiency</div>
+      <div class="hero-title">Per-Video Averages</div>
+      <div class="hero-sub">Average performance per video published each month</div>
+      <div class="hero-actions">${filterBarHTML()}</div>
+    </div>
+    <div class="content">
+      <div class="charts-grid fade-up fade-up-1">
+        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg views / video</div><div class="leg" id="pvL1"></div></div><div style="position:relative;height:200px"><canvas id="pvV" role="img" aria-label="Avg views per video">Avg views</canvas></div></div>
+        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg revenue / video</div><div class="leg" id="pvL2"></div></div><div style="position:relative;height:200px"><canvas id="pvR" role="img" aria-label="Avg revenue per video">Avg revenue</canvas></div></div>
+        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg impressions / video</div><div class="leg" id="pvL3"></div></div><div style="position:relative;height:200px"><canvas id="pvI" role="img" aria-label="Avg impressions per video">Avg impressions</canvas></div></div>
+        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg CTR / video</div><div class="leg" id="pvL4"></div></div><div style="position:relative;height:200px"><canvas id="pvC" role="img" aria-label="Avg CTR per video">Avg CTR</canvas></div></div>
+      </div>
+      <div class="section-hd fade-up fade-up-2"><div class="section-title">Per-Video Detail</div><div class="section-rule"></div></div>
+      <div class="yoy-table fade-up fade-up-2">
+        <div class="yoy-thead" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px">
+          <span>Channel</span><span>Period</span><span>Videos</span><span>Avg views</span><span>Avg watch hrs</span><span>Avg revenue</span><span>Avg impressions</span><span>Avg CTR</span><span>Avg retention</span>
+        </div>
+        ${pv.sort((a,b)=>{const [am,ay]=(a['Period']||'').split(' ');const [bm,by]=(b['Period']||'').split(' ');return(+by-+ay)||(MONTH_NAMES.indexOf(bm)-MONTH_NAMES.indexOf(am));}).map(r=>{
+          const color=chColor(r['Channel']);
+          return `<div class="yoy-trow" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px">
+            <div class="ch-tag"><div class="ch-tag-dot" style="background:${color}"></div><span style="font-size:13px;font-weight:600">${r['Channel']}</span></div>
+            <div class="num-cell" style="color:var(--muted2)">${r['Period']}</div>
+            <div class="num-cell">${r['Video Count']||0}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Avg Views'])||0)}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Avg Watch Hours'])||0)}</div>
+            <div class="num-cell">${fmtD(parseFloat(r['Avg Revenue ($)'])||0)}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Avg Impressions'])||0)}</div>
+            <div class="num-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
+            <div class="num-cell">${(parseFloat(r['Avg Retention %'])||0).toFixed(1)}%</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  function mkLeg(id){document.getElementById(id).innerHTML=chs.map(ch=>`<span class="leg-item"><span class="leg-bar" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('');}
+  ['pvL1','pvL2','pvL3','pvL4'].forEach(mkLeg);
+  const mkDs=(col,fill=false)=>chs.map(ch=>({label:ch,data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true}));
+  CHARTS.pvv=new Chart(document.getElementById('pvV'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Views',chs.length===1)},options:cOpts(v=>fmtNum(v))});
+  CHARTS.pvr=new Chart(document.getElementById('pvR'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Revenue ($)')},options:cOpts(v=>'$'+v.toFixed(0))});
+  CHARTS.pvi=new Chart(document.getElementById('pvI'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Impressions')},options:cOpts(v=>fmtNum(v))});
+  CHARTS.pvc=new Chart(document.getElementById('pvC'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:cOpts(v=>v.toFixed(1)+'%')});
 }
 
 // ── TOP VIDEOS ────────────────────────────────────────────────
 function renderVideos() {
-  const all = filterVideos(S.data.videos)
-    .sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0))
-    .slice(0,100);
+  const vids=filterVids(S.data.videos).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,100);
 
-  document.getElementById('mainContent').innerHTML = `
-    <div class="page-header"><div>
-      <div class="page-title">Top Videos</div>
-      <div class="page-sub">${S.channel==='ALL'?'All channels':S.channel} · top 100 by views</div>
-    </div></div>
-    ${filterBar()}
-    <div class="tbl-wrap">
-      <div class="tbl-head" style="grid-template-columns:3fr 80px 80px 80px 70px 70px 70px">
-        <span>Video</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span>
-      </div>
-      ${all.map(r=>{
-        const color=chColor(r['Channel']); const ret=parseFloat(r['Avg Retention %'])||0;
-        const pub=r['Published At']?r['Published At'].substring(0,12):'';
-        return `<div class="tbl-row" style="grid-template-columns:3fr 80px 80px 80px 70px 70px 70px">
-          <div>
-            <div class="cell-title">${r['Title']||'Untitled'}</div>
-            <div class="cell-sub" style="display:flex;gap:6px">
-              <span style="color:${color}">${r['Channel']}</span>
-              ${pub?`<span>·</span><span>${pub}</span>`:''}
+  document.getElementById('mainContent').innerHTML=`
+    <div class="hero fade-up">
+      <div class="hero-eyebrow">Content Library</div>
+      <div class="hero-title">Top Videos</div>
+      <div class="hero-sub">${S.channel==='ALL'?'All channels':S.channel} · top 100 by views</div>
+      <div class="hero-actions">${filterBarHTML()}</div>
+    </div>
+    <div class="content">
+      <div class="yoy-table fade-up fade-up-1">
+        <div class="yoy-thead" style="grid-template-columns:3fr 85px 80px 85px 85px 70px 70px">
+          <span>Video</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span>
+        </div>
+        ${vids.map((r,idx)=>{
+          const color=chColor(r['Channel']);const ret=parseFloat(r['Avg Retention %'])||0;
+          const pub=r['Published At']?r['Published At'].substring(0,12):'';
+          return `<div class="yoy-trow" style="grid-template-columns:3fr 85px 80px 85px 85px 70px 70px">
+            <div>
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${r['Title']||'Untitled'}</div>
+              <div style="display:flex;gap:8px;margin-top:3px;font-family:var(--mono);font-size:10px">
+                <span style="color:${color}">${r['Channel']}</span>
+                ${pub?`<span style="color:var(--muted)">·</span><span style="color:var(--muted)">${pub}</span>`:''}
+              </div>
             </div>
-          </div>
-          <div class="mono">${fmt(parseFloat(r['Views'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Watch Hours'])||0)}</div>
-          <div class="mono">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
-          <div class="mono">${fmt(parseFloat(r['Impressions'])||0)}</div>
-          <div class="mono">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
-          <div><div class="mono">${ret.toFixed(1)}%</div><div class="ret-bar-bg"><div class="ret-bar-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
-        </div>`;
-      }).join('')}
+            <div class="num-cell">${fmtNum(parseFloat(r['Views'])||0)}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Watch Hours'])||0)}</div>
+            <div class="num-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
+            <div class="num-cell">${fmtNum(parseFloat(r['Impressions'])||0)}</div>
+            <div class="num-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
+            <div>
+              <div class="num-cell">${ret.toFixed(1)}%</div>
+              <div style="height:2px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:3px;width:60px">
+                <div style="height:100%;width:${Math.min(ret*2,100)}%;background:${color};border-radius:2px"></div>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
 }
 </script>
