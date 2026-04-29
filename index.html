@@ -180,7 +180,26 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .delta-up { font-family: var(--mono); font-size: 12px; color: var(--green); font-weight: 600; }
 .delta-dn { font-family: var(--mono); font-size: 12px; color: var(--red); font-weight: 600; }
 
-/* CHANNEL SCORECARD */
+/* CHANNEL FILTER */
+.ch-filter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+.ch-filter-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; margin-right: 4px; white-space: nowrap; }
+.ch-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--rule2);
+  background: var(--white);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  color: var(--ink3);
+  cursor: pointer; transition: all 0.12s;
+  white-space: nowrap;
+}
+.ch-pill:hover { border-color: var(--ink2); color: var(--ink); }
+.ch-pill.on { color: var(--white); border-color: transparent; }
+.ch-pill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ch-pill-all { font-family: var(--mono); font-size: 12px; }
+
+/* CHANNEL FILTER */
 .scorecard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
 .scorecard {
   background: var(--white);
@@ -272,7 +291,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
         Top Videos
       </div>
     </div>
-    <div class="ch-block">
+    <div class="ch-block" style="display:none">
       <div class="block-label">Channels</div>
       <div id="chList"></div>
     </div>
@@ -293,8 +312,8 @@ const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#65a30d','#db2777'];
 
-let S = { page:'overview', channel:'ALL', from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null };
-let CH = {};
+let S = { page:'overview', channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null };
+let CH = {}; // channel → color map
 
 (function init() {
   const k=localStorage.getItem('yt_api_key'), id=localStorage.getItem('yt_sheet_id');
@@ -323,6 +342,8 @@ async function loadData(){
     S.data={summary,monthly,pervideo,videos};
     // Build channel color map
     summary.forEach((r,i)=>{CH[r['Channel']]=PAL[i%PAL.length];});
+    // Default: all channels selected
+    if(S.channels.length===0) S.channels=summary.map(r=>r['Channel']).filter(Boolean);
     // Set date range
     const sorted=monthly.map(r=>({yr:+r['Year'],mo:+r['Month']})).filter(r=>r.yr&&r.mo).sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo);
     if(sorted.length&&!S.from){
@@ -350,21 +371,48 @@ function setLoading(){document.getElementById('mainContent').innerHTML='<div cla
 function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
 
 function buildSidebar(){
-  if(!S.data) return;
-  const chs=['ALL',...S.data.summary.map(r=>r['Channel']).filter(Boolean)];
-  document.getElementById('chList').innerHTML=chs.map(ch=>{
-    const isAll=ch==='ALL';
-    const color=isAll?'#aaa':CH[ch]||'#aaa';
-    const v=!isAll?(S.data.summary.find(r=>r['Channel']===ch)||{})['Total Views']:'';
-    return `<div class="ch-row${S.channel===ch?' active':''}" onclick="setChannel('${ch.replace(/'/g,"\\'")}')">
-      <span class="ch-pip" style="background:${color}"></span>
-      <span class="ch-row-name${S.channel===ch?' active':''}">${isAll?'All Channels':ch}</span>
-      ${v?`<span class="ch-row-stat">${fmtN(+v)}</span>`:''}
-    </div>`;
-  }).join('');
+  // sidebar channel list hidden — channels now filtered per page
 }
 
-function setChannel(ch){S.channel=ch;buildSidebar();renderPage();}
+function toggleChannel(ch){
+  if(ch==='ALL'){
+    // if all selected, deselect all; else select all
+    const allChs=S.data.summary.map(r=>r['Channel']).filter(Boolean);
+    S.channels = S.channels.length===allChs.length ? [] : [...allChs];
+  } else {
+    if(S.channels.includes(ch)){
+      S.channels=S.channels.filter(c=>c!==ch);
+    } else {
+      S.channels=[...S.channels,ch];
+    }
+  }
+  if(S.channels.length===0){
+    // never allow 0 — reset to all
+    S.channels=S.data.summary.map(r=>r['Channel']).filter(Boolean);
+  }
+  renderPage();
+}
+
+function setChannel(ch){ toggleChannel(ch); }
+
+// Render inline channel filter pills for each page
+function channelFilterHTML(){
+  if(!S.data) return '';
+  const allChs=S.data.summary.map(r=>r['Channel']).filter(Boolean);
+  const allOn=S.channels.length===allChs.length;
+  return `<div class="ch-filter">
+    <span class="ch-filter-label">Channels</span>
+    <button class="ch-pill ch-pill-all${allOn?' on':''}" style="${allOn?'background:var(--ink)':''}" onclick="toggleChannel('ALL')">All</button>
+    ${allChs.map(ch=>{
+      const on=S.channels.includes(ch);
+      const color=CH[ch]||'#aaa';
+      return `<button class="ch-pill${on?' on':''}" style="${on?`background:${color}`:''}" onclick="toggleChannel('${ch.replace(/'/g,"\\'")}')">
+        <span class="ch-pill-dot" style="background:${on?'rgba(255,255,255,0.7)':color}"></span>
+        ${ch}
+      </button>`;
+    }).join('')}
+  </div>`;
+}
 function setPage(p){
   S.page=p;
   document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',['overview','yoy','monthly','pervideo','videos'][i]===p));
@@ -380,11 +428,11 @@ function inRange(yr,mo){
 }
 function filterMo(rows){
   let r=rows.filter(r=>inRange(+r['Year'],+r['Month']));
-  if(S.channel!=='ALL') r=r.filter(r=>r['Channel']===S.channel);
+  r=r.filter(r=>S.channels.includes(r['Channel']));
   return r;
 }
 function filterVids(rows){
-  let r=S.channel!=='ALL'?rows.filter(r=>r['Channel']===S.channel):rows;
+  let r=rows.filter(r=>S.channels.includes(r['Channel']));
   if(S.from||S.to) r=r.filter(row=>{
     const pub=row['Published At']?new Date(row['Published At']):null;
     if(!pub||isNaN(pub)) return true;
@@ -444,9 +492,9 @@ function renderPage(){
 
 // ── OVERVIEW ──────────────────────────────────────────────────
 function renderOverview(){
-  const sum=S.channel==='ALL'?S.data.summary:S.data.summary.filter(r=>r['Channel']===S.channel);
+  const chs=S.channels;
+  const sum=S.data.summary.filter(r=>chs.includes(r['Channel']));
   const mo=filterMo(S.data.monthly);
-  const chs=S.channel==='ALL'?S.data.summary.map(r=>r['Channel']).filter(Boolean):[S.channel];
   const periods=sortPeriods([...new Set(mo.map(r=>r['Period']))]);
   const years=getYears();
 
@@ -483,12 +531,12 @@ function renderOverview(){
     <div class="page-top fade">
       <div>
         <div class="page-eyebrow">Overview</div>
-        <div class="page-title">${S.channel==='ALL'?'All <em>Channels</em>':S.channel}</div>
+        <div class="page-title">All <em>Channels</em></div>
       </div>
       ${filterBar()}
     </div>
     <div class="content fade">
-
+      ${channelFilterHTML()}
       <div class="stat-row">
         <div class="stat-cell">
           <div class="stat-eyebrow">Total views</div>
@@ -594,7 +642,7 @@ function renderOverview(){
     label:ch,
     data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
     borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:fill&&chs.length===1,
-    tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+    tension:0,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
   }));
 
   _charts.v=new Chart(document.getElementById('cViews'),{type:'line',data:{labels:periods,datasets:mkDs('Views',true)},options:chartDefaults(v=>fmtN(v))});
@@ -606,7 +654,7 @@ function renderOverview(){
 function renderYoY(){
   const mo=S.data.monthly;
   const years=getYears();
-  const chs=S.channel==='ALL'?[...new Set(mo.map(r=>r['Channel']))]:[S.channel];
+  const chs=S.channels;
 
   const byYC={};
   mo.forEach(r=>{
@@ -634,10 +682,10 @@ function renderYoY(){
     return{
       label:String(yr),
       data:MO.map((_,mi)=>{
-        const rows=mo.filter(r=>+r['Year']===yr&&+r['Month']===mi+1&&(S.channel==='ALL'||r['Channel']===S.channel));
+        const rows=mo.filter(r=>+r['Year']===yr&&+r['Month']===mi+1&&S.channels.includes(r['Channel']));
         return rows.reduce((s,r)=>s+(parseFloat(r['Views'])||0),0)||null;
       }),
-      borderColor:color,backgroundColor:color+'22',fill:true,tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+      borderColor:color,backgroundColor:color+'22',fill:true,tension:0,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
     };
   });
 
@@ -651,6 +699,7 @@ function renderYoY(){
       </div>
     </div>
     <div class="content fade">
+      ${channelFilterHTML()}
 
       <div class="stat-row">
         ${totals.map((t,i)=>{
@@ -756,7 +805,7 @@ function renderYoY(){
 // ── MONTHLY ───────────────────────────────────────────────────
 function renderMonthly(){
   const mo=filterMo(S.data.monthly);
-  const chs=S.channel==='ALL'?[...new Set(mo.map(r=>r['Channel']))]:[S.channel];
+  const chs=S.channels;
   const periods=sortPeriods([...new Set(mo.map(r=>r['Period']))]);
 
   document.getElementById('mainContent').innerHTML=`
@@ -765,6 +814,7 @@ function renderMonthly(){
       ${filterBar()}
     </div>
     <div class="content fade">
+      ${channelFilterHTML()}
       <div class="charts-grid">
         <div class="chart-card wide">
           <div class="card-top">
@@ -814,7 +864,7 @@ function renderMonthly(){
   const mkDs=(col)=>chs.map(ch=>({
     label:ch,
     data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:chs.length===1,tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:chs.length===1,tension:0,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
   }));
   _charts.mv=new Chart(document.getElementById('mV'),{type:'line',data:{labels:periods,datasets:mkDs('Views')},options:chartDefaults(v=>fmtN(v))});
   _charts.mi=new Chart(document.getElementById('mI'),{type:'line',data:{labels:periods,datasets:mkDs('Impressions')},options:chartDefaults(v=>fmtN(v))});
@@ -823,8 +873,8 @@ function renderMonthly(){
 
 // ── PER-VIDEO ─────────────────────────────────────────────────
 function renderPerVideo(){
-  const pv=(S.channel==='ALL'?S.data.pervideo:S.data.pervideo.filter(r=>r['Channel']===S.channel)).filter(r=>inRange(+r['Year'],+r['Month']));
-  const chs=S.channel==='ALL'?[...new Set(pv.map(r=>r['Channel']))]:[S.channel];
+  const chs=S.channels;
+  const pv=S.data.pervideo.filter(r=>chs.includes(r['Channel'])).filter(r=>inRange(+r['Year'],+r['Month']));
   const periods=sortPeriods([...new Set(pv.map(r=>r['Period']))]);
 
   document.getElementById('mainContent').innerHTML=`
@@ -833,6 +883,7 @@ function renderPerVideo(){
       ${filterBar()}
     </div>
     <div class="content fade">
+      ${channelFilterHTML()}
       <div class="charts-grid">
         <div class="chart-card"><div class="card-top"><div class="card-label">Avg views / video</div></div><div style="position:relative;height:300px"><canvas id="pvV" role="img" aria-label="Avg views per video">Avg views</canvas></div></div>
         <div class="chart-card"><div class="card-top"><div class="card-label">Avg revenue / video</div></div><div style="position:relative;height:300px"><canvas id="pvR" role="img" aria-label="Avg revenue per video">Avg revenue</canvas></div></div>
@@ -864,7 +915,7 @@ function renderPerVideo(){
   const mkDs=(col,fill=false)=>chs.map(ch=>({
     label:ch,
     data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
   }));
   _charts.pvv=new Chart(document.getElementById('pvV'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Views',chs.length===1)},options:chartDefaults(v=>fmtN(v))});
   _charts.pvr=new Chart(document.getElementById('pvR'),{type:'bar',data:{labels:periods,datasets:chs.map(ch=>({label:ch,data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg Revenue ($)'])||null:null;}),backgroundColor:chColor(ch)+'88',borderRadius:3}))},options:chartDefaults(v=>'$'+v.toFixed(0))});
@@ -881,6 +932,7 @@ function renderVideos(){
       ${filterBar()}
     </div>
     <div class="content fade">
+      ${channelFilterHTML()}
       <div class="data-table">
         <div class="dt-head" style="grid-template-columns:3fr 80px 80px 85px 85px 65px 70px">
           <span>Video</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span>
