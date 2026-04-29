@@ -3,755 +3,607 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Channel Analytics — Executive Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Channel Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Epilogue:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 :root {
-  --bg: #080810;
-  --bg2: #0e0e1a;
-  --surface: #111120;
-  --surface2: #181830;
-  --surface3: #1e1e38;
-  --border: rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.12);
-  --text: #ffffff;
-  --muted: #6a6a8a;
-  --muted2: #9494b8;
-  --gold: #f0b429;
-  --gold2: #ffd166;
-  --electric: #00e5ff;
-  --green: #00e096;
-  --red: #ff4d6d;
-  --purple: #7c3aed;
-  --disp: 'Barlow Condensed', sans-serif;
-  --body: 'Barlow', sans-serif;
-  --mono: 'JetBrains Mono', monospace;
+  --bg: #f7f6f3;
+  --white: #ffffff;
+  --ink: #111111;
+  --ink2: #444444;
+  --ink3: #888888;
+  --rule: #e2e0da;
+  --rule2: #d0cec7;
+  --surface: #ffffff;
+  --surface2: #f0ede8;
+  --accent: #1a1a2e;
+  --green: #1a6645;
+  --green-bg: #e8f5ee;
+  --red: #b91c1c;
+  --red-bg: #fef2f2;
+  --blue: #1d4ed8;
+  --amber: #92400e;
+  --serif: 'Instrument Serif', serif;
+  --sans: 'Epilogue', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
-
-/* NOISE TEXTURE OVERLAY */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.4;
-}
+html { font-size: 14px; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
 
 /* LAYOUT */
-.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; position: relative; z-index: 1; }
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
 
 /* SIDEBAR */
 .sidebar {
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  background: var(--white);
+  border-right: 1px solid var(--rule);
   display: flex;
   flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  overflow-x: hidden;
 }
-.sidebar::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--gold), var(--electric), var(--green));
-}
-.logo-block { padding: 32px 24px 28px; border-bottom: 1px solid var(--border); }
-.logo-eyebrow { font-family: var(--mono); font-size: 9px; color: var(--gold); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 8px; }
-.logo-title { font-family: var(--disp); font-size: 22px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1; }
-.logo-title span { color: var(--gold); }
-.logo-sub { font-size: 11px; color: var(--muted); margin-top: 6px; letter-spacing: 0.05em; }
+.logo-block { padding: 28px 20px 24px; border-bottom: 1px solid var(--rule); }
+.logo-sup { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px; }
+.logo-wordmark { font-family: var(--serif); font-size: 22px; color: var(--ink); line-height: 1; }
+.logo-wordmark em { font-style: italic; color: var(--ink3); }
 
-.nav-section { padding: 20px 0; border-bottom: 1px solid var(--border); }
-.nav-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; padding: 0 24px; margin-bottom: 10px; }
+.nav-block { padding: 16px 0; border-bottom: 1px solid var(--rule); }
 .nav-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px 24px;
-  font-size: 13px; font-weight: 500;
-  color: var(--muted2);
-  cursor: pointer;
-  transition: all 0.15s;
-  border-left: 3px solid transparent;
-  position: relative;
-  letter-spacing: 0.02em;
-}
-.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
-.nav-item.active {
-  color: var(--text);
-  border-left-color: var(--gold);
-  background: rgba(240,180,41,0.06);
-}
-.nav-item.active .nav-icon { color: var(--gold); }
-.nav-icon { width: 16px; height: 16px; flex-shrink: 0; }
-
-.ch-section { padding: 20px 0; flex: 1; }
-.ch-list { padding: 0 12px; }
-.ch-card {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 13px; font-weight: 400;
+  color: var(--ink3);
   cursor: pointer;
-  transition: all 0.15s;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
+  transition: color 0.12s;
+  border-left: 2px solid transparent;
 }
-.ch-card:hover { background: rgba(255,255,255,0.04); }
-.ch-card.active { background: rgba(255,255,255,0.07); border-color: var(--border2); }
-.ch-avatar {
-  width: 32px; height: 32px; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--disp); font-size: 13px; font-weight: 800;
-  flex-shrink: 0;
-}
-.ch-info { flex: 1; min-width: 0; }
-.ch-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ch-views { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+.nav-item:hover { color: var(--ink); }
+.nav-item.active { color: var(--ink); font-weight: 600; border-left-color: var(--ink); }
+.nav-icon { width: 14px; height: 14px; flex-shrink: 0; stroke: currentColor; }
 
-.sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border); }
-.sync-time { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 8px; }
-.sync-btn {
-  width: 100%; padding: 9px;
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: 6px;
-  color: var(--muted2);
-  font-family: var(--body); font-size: 12px; font-weight: 500;
-  cursor: pointer; transition: all 0.15s;
-  letter-spacing: 0.05em;
+.ch-block { padding: 16px 0; flex: 1; }
+.block-label { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; padding: 0 20px; margin-bottom: 8px; }
+.ch-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 20px;
+  cursor: pointer; transition: background 0.1s;
 }
-.sync-btn:hover { border-color: var(--gold); color: var(--gold); }
-.sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ch-row:hover { background: var(--surface2); }
+.ch-row.active { background: var(--surface2); }
+.ch-pip { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ch-row-name { font-size: 12px; font-weight: 500; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-row-name.active { color: var(--ink); }
+.ch-row-stat { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-left: auto; flex-shrink: 0; }
+
+.sidebar-foot { padding: 16px 20px; border-top: 1px solid var(--rule); margin-top: auto; }
+.foot-sync { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-bottom: 8px; }
+.refresh-btn {
+  width: 100%; padding: 8px 12px;
+  background: var(--ink);
+  border: none; border-radius: 5px;
+  color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.refresh-btn:hover { opacity: 0.8; }
+.refresh-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* MAIN */
-.main { padding: 0; overflow-x: hidden; }
+.main { min-width: 0; }
 
-/* HERO BANNER */
-.hero {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  padding: 32px 40px 28px;
-  position: relative;
-  overflow: hidden;
-}
-.hero::after {
-  content: '';
-  position: absolute;
-  right: -60px; top: -60px;
-  width: 300px; height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(240,180,41,0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-.hero-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--gold); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 10px; }
-.hero-title { font-family: var(--disp); font-size: 38px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1; margin-bottom: 6px; }
-.hero-sub { font-size: 13px; color: var(--muted2); letter-spacing: 0.03em; }
-.hero-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
-
-/* FILTER BAR */
-.filter-strip {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 8px;
+/* PAGE TOP */
+.page-top {
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  padding: 28px 36px 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
   flex-wrap: wrap;
 }
-.filter-strip label { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; padding: 0 4px; }
-.filter-strip input[type=month] {
-  background: transparent;
-  border: none;
-  color: var(--text);
+.page-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px; }
+.page-title { font-family: var(--serif); font-size: 32px; line-height: 1; color: var(--ink); }
+.page-title em { font-style: italic; }
+
+/* FILTER */
+.filter-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filter-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); }
+.month-input {
+  background: var(--surface2);
+  border: 1px solid var(--rule2);
+  border-radius: 5px;
+  padding: 5px 8px;
   font-family: var(--mono); font-size: 11px;
-  outline: none; cursor: pointer;
-  padding: 2px 4px;
-}
-.filter-strip input[type=month]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-.arrow-sep { color: var(--muted); font-size: 12px; }
-.yr-pill {
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-family: var(--mono); font-size: 11px;
+  color: var(--ink);
+  outline: none;
   cursor: pointer;
-  border: 1px solid var(--border2);
+}
+.month-input:focus { border-color: var(--ink2); }
+.filter-sep { color: var(--ink3); font-size: 11px; }
+.yr-chip {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: var(--mono); font-size: 10px;
+  border: 1px solid var(--rule2);
   background: transparent;
-  color: var(--muted2);
-  transition: all 0.15s;
+  color: var(--ink3);
+  cursor: pointer; transition: all 0.1s;
 }
-.yr-pill:hover { border-color: var(--gold); color: var(--gold); }
-.yr-pill.sel { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+.yr-chip:hover { border-color: var(--ink); color: var(--ink); }
+.yr-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-/* CONTENT AREA */
-.content { padding: 32px 40px; }
+/* CONTENT */
+.content { padding: 28px 36px; }
 
-/* STAT HERO ROW */
-.stat-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 2px; margin-bottom: 32px; background: var(--border); border-radius: 12px; overflow: hidden; }
-.stat-block {
-  background: var(--surface);
-  padding: 24px 20px;
-  position: relative;
-  transition: background 0.2s;
-}
-.stat-block:hover { background: var(--surface2); }
-.stat-block::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
-.stat-block.s1::before { background: var(--gold); }
-.stat-block.s2::before { background: var(--electric); }
-.stat-block.s3::before { background: var(--green); }
-.stat-block.s4::before { background: var(--red); }
-.stat-block.s5::before { background: #a78bfa; }
-.stat-block.s6::before { background: #fb923c; }
-.stat-eyebrow { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px; }
-.stat-num { font-family: var(--disp); font-size: 42px; font-weight: 900; line-height: 1; letter-spacing: -0.01em; }
-.stat-unit { font-family: var(--disp); font-size: 20px; font-weight: 700; color: var(--muted2); }
-.stat-delta { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-family: var(--mono); font-size: 10px; }
-.delta-up { color: var(--green); }
-.delta-dn { color: var(--red); }
-.delta-dot { width: 5px; height: 5px; border-radius: 50%; }
+/* STAT ROW */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 28px; }
+.stat-cell { padding: 20px 20px 18px; border-right: 1px solid var(--rule); }
+.stat-cell:last-child { border-right: none; }
+.stat-eyebrow { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; }
+.stat-num { font-family: var(--serif); font-size: 36px; line-height: 1; color: var(--ink); }
+.stat-sub { font-size: 11px; color: var(--ink3); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+.up-tag { color: var(--green); font-family: var(--mono); font-size: 10px; background: var(--green-bg); padding: 1px 5px; border-radius: 3px; }
+.dn-tag { color: var(--red); font-family: var(--mono); font-size: 10px; background: var(--red-bg); padding: 1px 5px; border-radius: 3px; }
 
-/* SECTION HEADER */
-.section-hd { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
-.section-title { font-family: var(--disp); font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-.section-rule { flex: 1; height: 1px; background: var(--border); }
-.section-count { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-
-/* CHART CARDS */
-.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
-.chart-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-}
+/* CHART GRID */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+.chart-card { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 22px 24px; }
 .chart-card.wide { grid-column: span 2; }
-.chart-card.tall { grid-column: span 2; }
-.card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.card-title { font-family: var(--disp); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); }
-.card-val { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.leg { display: flex; gap: 16px; flex-wrap: wrap; }
-.leg-item { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--muted2); }
-.leg-bar { width: 16px; height: 3px; border-radius: 2px; }
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+.card-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; }
+.card-hero { font-family: var(--serif); font-size: 26px; color: var(--ink); margin-top: 4px; }
+.card-leg { display: flex; gap: 14px; flex-wrap: wrap; }
+.leg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.leg-txt { font-family: var(--mono); font-size: 10px; color: var(--ink3); }
 
-/* CHANNEL CARDS GRID */
-.ch-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
-.ch-perf-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+/* SECTION */
+.section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.section-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
+.section-line { flex: 1; height: 1px; background: var(--rule); }
+
+/* TABLE */
+.data-table { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 28px; }
+.dt-head { display: grid; padding: 11px 20px; border-bottom: 1px solid var(--rule); background: var(--surface2); gap: 8px; }
+.dt-head span { font-family: var(--mono); font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; }
+.dt-row { display: grid; padding: 12px 20px; border-bottom: 1px solid var(--rule); gap: 8px; align-items: center; transition: background 0.08s; }
+.dt-row:last-child { border-bottom: none; }
+.dt-row:hover { background: var(--surface2); }
+.dt-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.mono-cell { font-family: var(--mono); font-size: 12px; color: var(--ink2); }
+.ret-track { height: 3px; border-radius: 2px; background: var(--rule); margin-top: 4px; }
+.ret-fill { height: 100%; border-radius: 2px; }
+.delta-up { font-family: var(--mono); font-size: 10px; color: var(--green); }
+.delta-dn { font-family: var(--mono); font-size: 10px; color: var(--red); }
+
+/* CHANNEL SCORECARD */
+.scorecard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.scorecard {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
   overflow: hidden;
-  transition: border-color 0.2s, transform 0.2s;
 }
-.ch-perf-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-.ch-perf-header { padding: 18px 20px 14px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
-.ch-perf-avatar { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-size: 18px; font-weight: 900; flex-shrink: 0; }
-.ch-perf-name { font-family: var(--disp); font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.2; }
-.ch-perf-handle { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
-.ch-perf-body { padding: 16px 20px; }
-.ch-stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-.ch-stat { text-align: center; }
-.ch-stat-val { font-family: var(--disp); font-size: 24px; font-weight: 900; line-height: 1; }
-.ch-stat-lbl { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
-.ch-perf-bar { height: 3px; border-radius: 2px; margin-top: 14px; background: var(--surface3); overflow: hidden; }
-.ch-perf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
-.ch-yoy { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
-.yoy-tag { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; }
-.yoy-up { background: rgba(0,224,150,0.12); color: var(--green); }
-.yoy-dn { background: rgba(255,77,109,0.12); color: var(--red); }
-.yoy-neu { background: rgba(255,255,255,0.06); color: var(--muted2); }
-
-/* YOY COMPARISON TABLE */
-.yoy-table { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
-.yoy-thead { display: grid; padding: 14px 24px; background: var(--surface2); gap: 8px; border-bottom: 1px solid var(--border); }
-.yoy-thead span { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; }
-.yoy-trow { display: grid; padding: 16px 24px; border-bottom: 1px solid var(--border); gap: 8px; align-items: center; transition: background 0.1s; }
-.yoy-trow:last-child { border-bottom: none; }
-.yoy-trow:hover { background: rgba(255,255,255,0.02); }
-.ch-tag { display: flex; align-items: center; gap: 10px; }
-.ch-tag-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.ch-tag-name { font-family: var(--disp); font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
-.num-cell { font-family: var(--mono); font-size: 13px; }
-.yr-header { font-family: var(--disp); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-.delta-cell { font-family: var(--mono); font-size: 11px; font-weight: 500; }
-
-/* DIVIDER */
-.divider { height: 1px; background: var(--border); margin: 32px 0; }
+.sc-head { padding: 16px 20px 14px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 12px; }
+.sc-pip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.sc-name { font-weight: 700; font-size: 13px; line-height: 1.2; }
+.sc-sub { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-top: 2px; }
+.sc-body { padding: 14px 20px; }
+.sc-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.sc-metric-val { font-family: var(--serif); font-size: 22px; line-height: 1; }
+.sc-metric-lbl { font-family: var(--mono); font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+.sc-bar { height: 2px; background: var(--rule); border-radius: 1px; margin-top: 14px; overflow: hidden; }
+.sc-bar-fill { height: 100%; border-radius: 1px; transition: width 0.6s ease; }
+.sc-tags { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
+.sc-tag { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 3px; }
 
 /* MODAL */
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 200; }
-.modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 40px; max-width: 480px; width: 90%; position: relative; }
-.modal::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: linear-gradient(90deg, var(--gold), var(--electric)); border-radius: 16px 16px 0 0; }
-.modal h2 { font-family: var(--disp); font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-.modal p { font-size: 13px; color: var(--muted2); line-height: 1.6; margin-bottom: 20px; }
-.modal label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; display: block; margin-bottom: 6px; }
-.modal input { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: var(--mono); font-size: 12px; margin-bottom: 14px; outline: none; transition: border-color 0.15s; }
-.modal input:focus { border-color: var(--gold); }
-.modal-note { background: var(--surface2); border-radius: 8px; padding: 12px 16px; font-size: 12px; color: var(--muted2); line-height: 1.7; margin-bottom: 20px; }
-.modal-note code { color: var(--electric); font-family: var(--mono); font-size: 11px; }
-.modal-btns { display: flex; gap: 10px; }
-.btn-gold { flex:1; padding:12px; background:var(--gold); border:none; border-radius:8px; color:#000; font-family:var(--disp); font-size:15px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; transition:opacity 0.15s; }
-.btn-gold:hover { opacity: 0.85; }
-.btn-ghost { padding:12px 18px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--muted2); font-family:var(--body); font-size:13px; cursor:pointer; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--white); border: 1px solid var(--rule); border-radius: 12px; padding: 36px; max-width: 460px; width: 90%; }
+.modal-title { font-family: var(--serif); font-size: 26px; margin-bottom: 6px; }
+.modal-sub { font-size: 13px; color: var(--ink3); line-height: 1.6; margin-bottom: 20px; }
+.modal label { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+.modal input { width: 100%; border: 1px solid var(--rule2); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--bg); margin-bottom: 12px; outline: none; }
+.modal input:focus { border-color: var(--ink); }
+.modal-note { background: var(--surface2); border-radius: 6px; padding: 12px 14px; font-size: 12px; color: var(--ink3); line-height: 1.7; margin-bottom: 18px; }
+.modal-note code { font-family: var(--mono); color: var(--blue); font-size: 11px; }
+.modal-btns { display: flex; gap: 8px; }
+.btn-ink { flex:1; padding:10px; background:var(--ink); border:none; border-radius:6px; color:#fff; font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer; }
+.btn-ink:hover { opacity: 0.85; }
+.btn-outline { padding:10px 16px; background:transparent; border:1px solid var(--rule2); border-radius:6px; color:var(--ink3); font-family:var(--sans); font-size:13px; cursor:pointer; }
 
 /* STATES */
-.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:400px; text-align:center; padding:40px; }
-.state-box h3 { font-family:var(--disp); font-size:24px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
-.state-box p { font-size:13px; color:var(--muted2); max-width:360px; line-height:1.6; }
-.spinner { width:36px; height:36px; border:2px solid var(--border2); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:20px; }
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:400px; text-align:center; }
+.state-box h3 { font-family:var(--serif); font-size:28px; margin-bottom:8px; }
+.state-box p { font-size:13px; color:var(--ink3); max-width:340px; line-height:1.6; }
+.spinner { width:28px; height:28px; border:2px solid var(--rule); border-top-color:var(--ink); border-radius:50%; animation:spin 0.7s linear infinite; margin-bottom:16px; }
 @keyframes spin { to { transform:rotate(360deg); } }
-
-/* ANIMATIONS */
-@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-.fade-up { animation: fadeUp 0.4s ease forwards; }
-.fade-up-1 { animation-delay: 0.05s; opacity: 0; }
-.fade-up-2 { animation-delay: 0.1s; opacity: 0; }
-.fade-up-3 { animation-delay: 0.15s; opacity: 0; }
-.fade-up-4 { animation-delay: 0.2s; opacity: 0; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.fade { animation: fadeIn 0.3s ease forwards; }
 </style>
 </head>
 <body>
 
 <div class="modal-bg" id="setupModal">
   <div class="modal">
-    <h2>Connect Data</h2>
-    <p>Enter your Google Sheet ID and API key to load live channel analytics.</p>
-    <div class="modal-note">
-      Get a free API key at <code>console.cloud.google.com</code> → APIs & Services → Credentials. Enable <code>Google Sheets API</code> and share your Sheet as "Anyone with link can view".
-    </div>
+    <div class="modal-title">Connect your Sheet</div>
+    <div class="modal-sub">Enter your Google Sheet ID and API key to load live channel analytics.</div>
+    <div class="modal-note">Get a free API key at <code>console.cloud.google.com</code> → APIs & Services → Credentials. Enable <code>Google Sheets API</code> and share your Sheet as "Anyone with link → Viewer".</div>
     <label>Sheet ID</label>
     <input id="sheetIdInput" type="text" placeholder="13YtFan9EmzAnh..." />
     <label>API Key</label>
     <input id="apiKeyInput" type="text" placeholder="AIza..." />
     <div class="modal-btns">
-      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn-gold" onclick="connectSheet()">Connect</button>
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn-ink" onclick="connectSheet()">Connect</button>
     </div>
   </div>
 </div>
 
 <div class="shell">
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="logo-block">
-      <div class="logo-eyebrow">Executive Dashboard</div>
-      <div class="logo-title">Channel <span>Hub</span></div>
-      <div class="logo-sub">YouTube Analytics Suite</div>
+      <div class="logo-sup">Analytics Suite</div>
+      <div class="logo-wordmark">Channel <em>Hub</em></div>
     </div>
-    <div class="nav-section">
-      <div class="nav-label">Navigation</div>
+    <div class="nav-block">
       <div class="nav-item active" onclick="setPage('overview')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="8" width="3" height="7" rx="1" fill="currentColor" opacity=".4"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor" opacity=".7"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
-        Command Center
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><rect x="1" y="9" width="3" height="6" rx="0.5"/><rect x="6.5" y="5" width="3" height="10" rx="0.5"/><rect x="12" y="1" width="3" height="14" rx="0.5"/></svg>
+        Overview
       </div>
       <div class="nav-item" onclick="setPage('yoy')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="6" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M1 10l4-4 3 3 4-5 3 2"/></svg>
         Year-over-Year
       </div>
       <div class="nav-item" onclick="setPage('monthly')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12L4 8l3 2 3-5 3 2 2-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>
-        Monthly Trends
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><rect x="1" y="1" width="14" height="14" rx="2"/><path d="M1 6h14M5 1v5M11 1v5"/></svg>
+        Monthly
       </div>
       <div class="nav-item" onclick="setPage('pervideo')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 5.5l4 2.5-4 2.5V5.5z" fill="currentColor"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M6 5.5l5 2.5-5 2.5V5.5z" fill="currentColor" stroke="none"/></svg>
         Per-Video
       </div>
       <div class="nav-item" onclick="setPage('videos')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
         Top Videos
       </div>
     </div>
-    <div class="ch-section">
-      <div class="nav-label" style="padding:20px 24px 10px">Channels</div>
-      <div class="ch-list" id="chList"></div>
+    <div class="ch-block">
+      <div class="block-label">Channels</div>
+      <div id="chList"></div>
     </div>
-    <div class="sidebar-footer">
-      <div class="sync-time" id="lastSync">Not synced</div>
-      <button class="sync-btn" id="syncBtn" onclick="loadData()">↻ Refresh Data</button>
+    <div class="sidebar-foot">
+      <div class="foot-sync" id="lastSync">Not synced</div>
+      <button class="refresh-btn" id="syncBtn" onclick="loadData()">Refresh data</button>
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="main" id="mainContent">
-    <div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Connecting to your analytics data...</p></div>
+    <div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>
   </main>
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
 const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance' };
-
-const PALETTE = ['#f0b429','#00e5ff','#00e096','#a78bfa','#ff4d6d','#fb923c','#38bdf8','#f472b6'];
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PAL = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#65a30d','#db2777'];
 
 let S = { page:'overview', channel:'ALL', from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null };
-let CHARTS = {};
+let CH = {};
 
-// ── INIT ──────────────────────────────────────────────────────
 (function init() {
-  const k = localStorage.getItem('yt_api_key');
-  const id = localStorage.getItem('yt_sheet_id');
-  if (id) { S.sheetId = id; document.getElementById('sheetIdInput').value = id; }
-  if (k)  { S.apiKey  = k;  document.getElementById('apiKeyInput').value  = k;  }
-  if (k) { document.getElementById('setupModal').style.display='none'; loadData(); }
+  const k=localStorage.getItem('yt_api_key'), id=localStorage.getItem('yt_sheet_id');
+  if(id){S.sheetId=id;document.getElementById('sheetIdInput').value=id;}
+  if(k){S.apiKey=k;document.getElementById('apiKeyInput').value=k;}
+  if(k){document.getElementById('setupModal').style.display='none';loadData();}
 })();
 
-function connectSheet() {
-  const id = document.getElementById('sheetIdInput').value.trim();
-  const k  = document.getElementById('apiKeyInput').value.trim();
-  if (!id||!k) { alert('Please fill in both fields.'); return; }
-  S.sheetId=id; S.apiKey=k;
-  localStorage.setItem('yt_sheet_id',id); localStorage.setItem('yt_api_key',k);
-  closeModal(); loadData();
+function connectSheet(){
+  const id=document.getElementById('sheetIdInput').value.trim();
+  const k=document.getElementById('apiKeyInput').value.trim();
+  if(!id||!k){alert('Please fill in both fields.');return;}
+  S.sheetId=id;S.apiKey=k;
+  localStorage.setItem('yt_sheet_id',id);localStorage.setItem('yt_api_key',k);
+  closeModal();loadData();
 }
-function closeModal() { document.getElementById('setupModal').style.display='none'; }
+function closeModal(){document.getElementById('setupModal').style.display='none';}
 
-// ── FETCH ─────────────────────────────────────────────────────
-async function loadData() {
-  if (!S.apiKey) { document.getElementById('setupModal').style.display='flex'; return; }
-  setSyncing(true); setLoading();
-  try {
-    const [summary,monthly,pervideo,videos] = await Promise.all([
-      fetchTab(TABS.summary), fetchTab(TABS.monthly),
-      fetchTab(TABS.pervideo), fetchTab(TABS.videos),
+async function loadData(){
+  if(!S.apiKey){document.getElementById('setupModal').style.display='flex';return;}
+  setSyncing(true);setLoading();
+  try{
+    const [summary,monthly,pervideo,videos]=await Promise.all([
+      fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos)
     ]);
-    S.data = {summary,monthly,pervideo,videos};
-    const months = monthly.map(r=>({yr:+r['Year'],mo:+r['Month']})).filter(r=>r.yr&&r.mo)
-      .sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo);
-    if (months.length && !S.from) {
-      S.from=`${months[0].yr}-${String(months[0].mo).padStart(2,'0')}`;
-      S.to=`${months[months.length-1].yr}-${String(months[months.length-1].mo).padStart(2,'0')}`;
+    S.data={summary,monthly,pervideo,videos};
+    // Build channel color map
+    summary.forEach((r,i)=>{CH[r['Channel']]=PAL[i%PAL.length];});
+    // Set date range
+    const sorted=monthly.map(r=>({yr:+r['Year'],mo:+r['Month']})).filter(r=>r.yr&&r.mo).sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo);
+    if(sorted.length&&!S.from){
+      S.from=`${sorted[0].yr}-${String(sorted[0].mo).padStart(2,'0')}`;
+      S.to=`${sorted[sorted.length-1].yr}-${String(sorted[sorted.length-1].mo).padStart(2,'0')}`;
     }
     document.getElementById('lastSync').textContent='Synced '+new Date().toLocaleTimeString();
-    buildSidebar(); renderPage();
-  } catch(e) { showError(e.message); }
+    buildSidebar();renderPage();
+  }catch(e){showError(e.message);}
   setSyncing(false);
 }
 
-async function fetchTab(tab) {
+async function fetchTab(tab){
   const url=`https://sheets.googleapis.com/v4/spreadsheets/${S.sheetId}/values/${encodeURIComponent(tab)}?key=${S.apiKey}`;
   const r=await fetch(url);
-  if (!r.ok) throw new Error(`Could not load "${tab}". Check your API key and Sheet sharing.`);
+  if(!r.ok) throw new Error(`Could not load "${tab}". Check your API key and Sheet sharing.`);
   const j=await r.json();
   const [headers,...rows]=j.values||[];
-  if (!headers) return [];
+  if(!headers) return [];
   return rows.map(row=>{const o={};headers.forEach((h,i)=>o[h]=row[i]??'');return o;});
 }
 
-function setSyncing(v) {
-  const b=document.getElementById('syncBtn');
-  b.disabled=v; b.textContent=v?'Loading...':'↻ Refresh Data';
-}
+function setSyncing(v){const b=document.getElementById('syncBtn');b.disabled=v;b.textContent=v?'Loading…':'Refresh data';}
+function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box fade"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>';}
+function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
 
-// ── SIDEBAR ───────────────────────────────────────────────────
-function buildSidebar() {
-  if (!S.data) return;
+function buildSidebar(){
+  if(!S.data) return;
   const chs=['ALL',...S.data.summary.map(r=>r['Channel']).filter(Boolean)];
-  document.getElementById('chList').innerHTML = chs.map((ch,i)=>{
+  document.getElementById('chList').innerHTML=chs.map(ch=>{
     const isAll=ch==='ALL';
-    const color=isAll?'#6a6a8a':PALETTE[(i-1)%PALETTE.length];
-    const initials=isAll?'ALL':ch.split(' ').map(w=>w[0]).join('').substring(0,3).toUpperCase();
-    const views=!isAll?(S.data.summary.find(r=>r['Channel']===ch)||{})['Total Views']:'';
-    return `<div class="ch-card${S.channel===ch?' active':''}" onclick="setChannel('${ch.replace(/'/g,"\\'")}')">
-      <div class="ch-avatar" style="background:${color}22;color:${color}">${initials}</div>
-      <div class="ch-info">
-        <div class="ch-name" style="color:${S.channel===ch?color:'inherit'}">${isAll?'All Channels':ch}</div>
-        ${views?`<div class="ch-views">${fmtNum(+views)} views</div>`:'<div class="ch-views">All channels</div>'}
-      </div>
+    const color=isAll?'#aaa':CH[ch]||'#aaa';
+    const v=!isAll?(S.data.summary.find(r=>r['Channel']===ch)||{})['Total Views']:'';
+    return `<div class="ch-row${S.channel===ch?' active':''}" onclick="setChannel('${ch.replace(/'/g,"\\'")}')">
+      <span class="ch-pip" style="background:${color}"></span>
+      <span class="ch-row-name${S.channel===ch?' active':''}">${isAll?'All Channels':ch}</span>
+      ${v?`<span class="ch-row-stat">${fmtN(+v)}</span>`:''}
     </div>`;
   }).join('');
 }
 
-function setChannel(ch) { S.channel=ch; buildSidebar(); renderPage(); }
-function setPage(p) {
+function setChannel(ch){S.channel=ch;buildSidebar();renderPage();}
+function setPage(p){
   S.page=p;
-  document.querySelectorAll('.nav-item').forEach((el,i)=>
-    el.classList.toggle('active',['overview','yoy','monthly','pervideo','videos'][i]===p));
+  document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',['overview','yoy','monthly','pervideo','videos'][i]===p));
   renderPage();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
-function inRange(yr,mo) {
-  if (!S.from||!S.to) return true;
+function inRange(yr,mo){
+  if(!S.from||!S.to) return true;
   const [fy,fm]=S.from.split('-').map(Number);
   const [ty,tm]=S.to.split('-').map(Number);
-  return (yr>fy||(yr===fy&&mo>=fm))&&(yr<ty||(yr===ty&&mo<=tm));
+  return(yr>fy||(yr===fy&&mo>=fm))&&(yr<ty||(yr===ty&&mo<=tm));
 }
-function filterMo(rows) {
+function filterMo(rows){
   let r=rows.filter(r=>inRange(+r['Year'],+r['Month']));
-  if (S.channel!=='ALL') r=r.filter(r=>r['Channel']===S.channel);
+  if(S.channel!=='ALL') r=r.filter(r=>r['Channel']===S.channel);
   return r;
 }
-function filterVids(rows) {
+function filterVids(rows){
   let r=S.channel!=='ALL'?rows.filter(r=>r['Channel']===S.channel):rows;
-  if (S.from||S.to) r=r.filter(row=>{
+  if(S.from||S.to) r=r.filter(row=>{
     const pub=row['Published At']?new Date(row['Published At']):null;
-    if (!pub||isNaN(pub)) return true;
+    if(!pub||isNaN(pub)) return true;
     return inRange(pub.getFullYear(),pub.getMonth()+1);
   });
   return r;
 }
 function agg(rows,col){return rows.reduce((s,r)=>s+(parseFloat(r[col])||0),0);}
 function avg(rows,col){return rows.length?agg(rows,col)/rows.length:0;}
-function fmtNum(n){n=Math.round(n);return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n.toString();}
+function fmtN(n){n=Math.round(n);return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n.toString();}
 function fmtD(n){return '$'+Math.round(n).toLocaleString();}
 function pct(a,b){return b?(((a-b)/b)*100):null;}
-function fmtPct(p){if(p===null)return '—';return (p>=0?'+':'')+p.toFixed(1)+'%';}
-function chColor(name){if(!S.data)return '#888';const i=S.data.summary.findIndex(r=>r['Channel']===name);return i>=0?PALETTE[i%PALETTE.length]:'#888';}
-
-function sortPeriods(periods) {
-  return [...periods].sort((a,b)=>{
-    const [am,ay]=a.split(' '); const [bm,by]=b.split(' ');
-    return (+ay-+by)||(MONTH_NAMES.indexOf(am)-MONTH_NAMES.indexOf(bm));
+function fmtP(p){if(p===null)return '';return(p>=0?'+':'')+p.toFixed(1)+'%';}
+function chColor(name){return CH[name]||'#aaa';}
+function getYears(){return[...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].map(Number).sort();}
+function sortPeriods(ps){
+  return[...ps].sort((a,b)=>{
+    const[am,ay]=a.split(' ');const[bm,by]=b.split(' ');
+    return(+ay-+by)||(MO.indexOf(am)-MO.indexOf(bm));
   });
 }
-
-function destroyCharts(){Object.values(CHARTS).forEach(c=>{try{c.destroy()}catch(e){}});CHARTS={};}
-function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Fetching your channel data...</p></div>';}
-function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box"><h3>Connection Error</h3><p>${msg}</p><br><button class="btn-gold" style="margin-top:16px;padding:10px 24px;font-size:14px" onclick="document.getElementById('setupModal').style.display='flex'">Update Settings</button></div>`;}
-
-// YEARS in data
-function getYears(){return [...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].map(Number).sort();}
-
-// FILTER BAR HTML
-function filterBarHTML(){
-  const years=getYears();
-  return `<div class="filter-strip">
-    <label>From</label>
-    <input type="month" value="${S.from}" onchange="S.from=this.value;renderPage()">
-    <span class="arrow-sep">→</span>
-    <label>To</label>
-    <input type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
-    ${years.map(yr=>`<button class="yr-pill${isYearSelected(yr)?' sel':''}" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`).join('')}
-    <button class="yr-pill${!S.from?'':''}" onclick="S.from='';S.to='';renderPage()">All</button>
-  </div>`;
-}
-function isYearSelected(yr){return S.from===`${yr}-01`&&S.to===`${yr}-12`;}
+function isYrSel(yr){return S.from===`${yr}-01`&&S.to===`${yr}-12`;}
 function setQuick(f,t){S.from=f;S.to=t;renderPage();}
 
-// CHART DEFAULT OPTIONS
-function cOpts(yFmt,extra={}){
-  return {responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e38',titleColor:'#fff',bodyColor:'#9494b8',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,cornerRadius:8,...(extra.tooltip||{})},...(extra.plugins||{})},
-    scales:{
-      y:{ticks:{callback:yFmt,font:{size:11,family:"'JetBrains Mono'"},color:'#6a6a8a'},grid:{color:'rgba(255,255,255,0.04)'},border:{display:false},...(extra.y||{})},
-      x:{ticks:{font:{size:10,family:"'JetBrains Mono'"},color:'#6a6a8a',maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false},border:{display:false},...(extra.x||{})},
-      ...(extra.scales||{})
-    },...extra};
+function filterBar(){
+  const years=getYears();
+  return `<div class="filter-row">
+    <span class="filter-label">From</span>
+    <input class="month-input" type="month" value="${S.from}" onchange="S.from=this.value;renderPage()">
+    <span class="filter-sep">→</span>
+    <input class="month-input" type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
+    <span class="filter-sep" style="margin-left:4px">·</span>
+    ${years.map(yr=>`<button class="yr-chip${isYrSel(yr)?' on':''}" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`).join('')}
+    <button class="yr-chip" onclick="S.from='';S.to='';renderPage()">All</button>
+  </div>`;
 }
 
-// ── RENDER ────────────────────────────────────────────────────
+let _charts={};
+function destroyCharts(){Object.values(_charts).forEach(c=>{try{c.destroy()}catch(e){}});_charts={};}
+
+function chartDefaults(yFmt,extra={}){
+  return{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#111',bodyColor:'#666',borderColor:'#e2e0da',borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:"'IBM Plex Mono'",size:11},bodyFont:{family:"'IBM Plex Mono'",size:11}},...(extra.plugins||{})},
+    scales:{
+      y:{ticks:{callback:yFmt,font:{size:10,family:"'IBM Plex Mono'"},color:'#888'},grid:{color:'#f0ede8'},border:{display:false},...(extra.y||{})},
+      x:{ticks:{font:{size:10,family:"'IBM Plex Mono'"},color:'#888',maxRotation:40,autoSkip:true,maxTicksLimit:12},grid:{display:false},border:{display:false},...(extra.x||{})},
+    },...extra
+  };
+}
+
 function renderPage(){
-  if (!S.data) return;
+  if(!S.data) return;
   destroyCharts();
   ({overview:renderOverview,yoy:renderYoY,monthly:renderMonthly,pervideo:renderPerVideo,videos:renderVideos}[S.page]||renderOverview)();
 }
 
-// ── OVERVIEW / COMMAND CENTER ─────────────────────────────────
-function renderOverview() {
-  const sum = S.channel==='ALL'?S.data.summary:S.data.summary.filter(r=>r['Channel']===S.channel);
-  const mo  = filterMo(S.data.monthly);
-  const chs = S.channel==='ALL'?S.data.summary.map(r=>r['Channel']).filter(Boolean):[S.channel];
-  const years = getYears();
-
-  const tv=agg(sum,'Total Views'), twh=agg(sum,'Total Watch Hours');
-  const tr=agg(sum,'Total Revenue ($)'), ts=agg(sum,'Total Subscribers');
-  const ti=agg(sum,'Total Impressions'), actr=avg(sum,'Avg CTR (%)');
-  const aret=avg(sum,'Avg Retention %');
-
+// ── OVERVIEW ──────────────────────────────────────────────────
+function renderOverview(){
+  const sum=S.channel==='ALL'?S.data.summary:S.data.summary.filter(r=>r['Channel']===S.channel);
+  const mo=filterMo(S.data.monthly);
+  const chs=S.channel==='ALL'?S.data.summary.map(r=>r['Channel']).filter(Boolean):[S.channel];
   const periods=sortPeriods([...new Set(mo.map(r=>r['Period']))]);
+  const years=getYears();
 
-  // YoY for hero deltas (latest 2 years)
-  const byYearCh={};
+  const tv=agg(sum,'Total Views'),twh=agg(sum,'Total Watch Hours');
+  const tr=agg(sum,'Total Revenue ($)'),ts=agg(sum,'Total Subscribers');
+  const actr=avg(sum,'Avg CTR (%)'),aret=avg(sum,'Avg Retention %');
+
+  // YoY deltas using last 2 years
+  const byYC={};
   S.data.monthly.forEach(r=>{
     const key=`${r['Year']}|${r['Channel']}`;
-    if(!byYearCh[key])byYearCh[key]={views:0,rev:0,subs:0,imp:0};
-    byYearCh[key].views+=parseFloat(r['Views'])||0;
-    byYearCh[key].rev+=parseFloat(r['Revenue ($)'])||0;
-    byYearCh[key].subs+=parseFloat(r['Subscribers'])||0;
-    byYearCh[key].imp+=parseFloat(r['Impressions'])||0;
+    if(!byYC[key])byYC[key]={views:0,rev:0,subs:0};
+    byYC[key].views+=parseFloat(r['Views'])||0;
+    byYC[key].rev+=parseFloat(r['Revenue ($)'])||0;
+    byYC[key].subs+=parseFloat(r['Subscribers'])||0;
   });
   const lastTwo=years.slice(-2);
-  const totByYear=yr=>({
-    views:chs.reduce((s,ch)=>s+((byYearCh[`${yr}|${ch}`]||{}).views||0),0),
-    rev:chs.reduce((s,ch)=>s+((byYearCh[`${yr}|${ch}`]||{}).rev||0),0),
-    subs:chs.reduce((s,ch)=>s+((byYearCh[`${yr}|${ch}`]||{}).subs||0),0),
+  const totYr=yr=>({
+    views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
+    rev:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
+    subs:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
   });
-  const [prev,curr]=lastTwo.length===2?[totByYear(lastTwo[0]),totByYear(lastTwo[1])]:[null,null];
+  const[tPrev,tCurr]=lastTwo.length===2?[totYr(lastTwo[0]),totYr(lastTwo[1])]:[null,null];
 
-  function deltaHTML(curr,prev,label){
-    if(!prev||!curr)return '';
+  function deltaTag(curr,prev){
+    if(!prev||!curr) return '';
     const p=pct(curr,prev);
-    const up=p>=0;
-    return `<div class="stat-delta"><span class="delta-dot" style="background:${up?'var(--green)':'var(--red)'}"></span><span class="${up?'delta-up':'delta-dn'}">${fmtPct(p)} vs ${lastTwo[0]}</span></div>`;
+    return p===null?'':`<span class="${p>=0?'up-tag':'dn-tag'}">${fmtP(p)}</span>`;
   }
 
-  document.getElementById('mainContent').innerHTML = `
-    <div class="hero fade-up">
-      <div class="hero-eyebrow">Command Center · ${S.channel==='ALL'?'All Channels':S.channel}</div>
-      <div class="hero-title">${S.channel==='ALL'?'Portfolio Overview':S.channel}</div>
-      <div class="hero-sub">${sum.length} channel${sum.length!==1?'s':''} · ${agg(sum,'Video Count').toLocaleString()} videos indexed</div>
-      <div class="hero-actions">${filterBarHTML()}</div>
+  const maxV=Math.max(...sum.map(r=>parseFloat(r['Total Views'])||0));
+
+  document.getElementById('mainContent').innerHTML=`
+    <div class="page-top fade">
+      <div>
+        <div class="page-eyebrow">Overview</div>
+        <div class="page-title">${S.channel==='ALL'?'All <em>Channels</em>':S.channel}</div>
+      </div>
+      ${filterBar()}
     </div>
+    <div class="content fade">
 
-    <div class="content">
-      <div class="stat-hero fade-up fade-up-1">
-        <div class="stat-block s1">
+      <div class="stat-row">
+        <div class="stat-cell">
           <div class="stat-eyebrow">Total views</div>
-          <div class="stat-num">${fmtNum(tv)}</div>
-          ${curr?deltaHTML(curr.views,prev.views,'views'):''}
+          <div class="stat-num">${fmtN(tv)}</div>
+          <div class="stat-sub">${tCurr?deltaTag(tCurr.views,tPrev.views):''} <span>vs prior year</span></div>
         </div>
-        <div class="stat-block s2">
+        <div class="stat-cell">
           <div class="stat-eyebrow">Watch hours</div>
-          <div class="stat-num">${fmtNum(twh)}</div>
-          <div class="stat-delta"><span class="delta-dot" style="background:var(--electric)"></span><span style="color:var(--muted2)">across all content</span></div>
+          <div class="stat-num">${fmtN(twh)}</div>
+          <div class="stat-sub">across all content</div>
         </div>
-        <div class="stat-block s3">
-          <div class="stat-eyebrow">Total revenue</div>
+        <div class="stat-cell">
+          <div class="stat-eyebrow">Revenue</div>
           <div class="stat-num">${fmtD(tr)}</div>
-          ${curr?deltaHTML(curr.rev,prev.rev,'revenue'):''}
+          <div class="stat-sub">${tCurr?deltaTag(tCurr.rev,tPrev.rev):''} <span>vs prior year</span></div>
         </div>
-        <div class="stat-block s4">
-          <div class="stat-eyebrow">Subscribers</div>
-          <div class="stat-num">${fmtNum(ts)}</div>
-          ${curr?deltaHTML(curr.subs,prev.subs,'subs'):''}
+        <div class="stat-cell">
+          <div class="stat-eyebrow">Subs gained</div>
+          <div class="stat-num">${fmtN(ts)}</div>
+          <div class="stat-sub">${tCurr?deltaTag(tCurr.subs,tPrev.subs):''} <span>vs prior year</span></div>
         </div>
-        <div class="stat-block s5">
+        <div class="stat-cell">
           <div class="stat-eyebrow">Avg CTR</div>
-          <div class="stat-num">${actr.toFixed(1)}<span class="stat-unit">%</span></div>
+          <div class="stat-num">${actr.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>
+          <div class="stat-sub">click-through rate</div>
         </div>
-        <div class="stat-block s6">
+        <div class="stat-cell">
           <div class="stat-eyebrow">Avg retention</div>
-          <div class="stat-num">${aret.toFixed(1)}<span class="stat-unit">%</span></div>
+          <div class="stat-num">${aret.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>
+          <div class="stat-sub">avg view duration</div>
         </div>
       </div>
 
-      <div class="section-hd fade-up fade-up-2">
-        <div class="section-title">Channel Performance</div>
-        <div class="section-rule"></div>
-        <div class="section-count">${sum.length} channels</div>
+      <div class="section-head"><div class="section-label">Channel scorecards</div><div class="section-line"></div></div>
+      <div class="scorecard-grid">
+        ${sum.sort((a,b)=>(parseFloat(b['Total Views'])||0)-(parseFloat(a['Total Views'])||0)).map(r=>{
+          const ch=r['Channel'],color=chColor(ch);
+          const v=parseFloat(r['Total Views'])||0,wh=parseFloat(r['Total Watch Hours'])||0;
+          const rev=parseFloat(r['Total Revenue ($)'])||0,ctr=parseFloat(r['Avg CTR (%)'])||0;
+          const ret=parseFloat(r['Avg Retention %'])||0,vc=parseFloat(r['Video Count'])||0;
+          const chYoys=lastTwo.length===2?lastTwo.map(yr=>byYC[`${yr}|${ch}`]||{}):[];
+          const vP=chYoys.length===2?pct(chYoys[1].views||0,chYoys[0].views||1):null;
+          const rP=chYoys.length===2?pct(chYoys[1].rev||0,chYoys[0].rev||1):null;
+          const barW=maxV?Math.round((v/maxV)*100):0;
+          return`<div class="scorecard">
+            <div class="sc-head">
+              <span class="sc-pip" style="background:${color}"></span>
+              <div>
+                <div class="sc-name">${ch}</div>
+                <div class="sc-sub">${vc.toLocaleString()} videos · ${fmtN(v)} views</div>
+              </div>
+            </div>
+            <div class="sc-body">
+              <div class="sc-metrics">
+                <div><div class="sc-metric-val" style="color:${color}">${fmtN(v)}</div><div class="sc-metric-lbl">Views</div></div>
+                <div><div class="sc-metric-val">${fmtD(rev)}</div><div class="sc-metric-lbl">Revenue</div></div>
+                <div><div class="sc-metric-val">${ctr.toFixed(1)}%</div><div class="sc-metric-lbl">CTR</div></div>
+              </div>
+              <div class="sc-bar"><div class="sc-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+              ${vP!==null?`<div class="sc-tags">
+                <span class="sc-tag" style="background:${vP>=0?'var(--green-bg)':'var(--red-bg)'};color:${vP>=0?'var(--green)':'var(--red)'}">${fmtP(vP)} views</span>
+                ${rP!==null?`<span class="sc-tag" style="background:${rP>=0?'var(--green-bg)':'var(--red-bg)'};color:${rP>=0?'var(--green)':'var(--red)'}">${fmtP(rP)} revenue</span>`:''}
+                <span class="sc-tag" style="background:var(--surface2);color:var(--ink3)">${lastTwo[0]}→${lastTwo[lastTwo.length-1]}</span>
+              </div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
       </div>
-      <div class="ch-cards fade-up fade-up-2" id="chCards"></div>
 
-      <div class="section-hd fade-up fade-up-3">
-        <div class="section-title">Views Trajectory</div>
-        <div class="section-rule"></div>
-        <div class="leg" id="legViews"></div>
-      </div>
-      <div class="charts-grid fade-up fade-up-3">
+      <div class="section-head"><div class="section-label">Views trajectory</div><div class="section-line"></div></div>
+      <div class="charts-grid">
         <div class="chart-card wide">
-          <div class="card-hd"><div class="card-title">Monthly views — all channels</div></div>
-          <div style="position:relative;height:260px"><canvas id="cViews" role="img" aria-label="Monthly views trend">Monthly views</canvas></div>
+          <div class="card-top">
+            <div><div class="card-label">Monthly views</div></div>
+            <div class="card-leg" id="legV"></div>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="cViews" role="img" aria-label="Monthly views line chart">Monthly views</canvas></div>
         </div>
         <div class="chart-card">
-          <div class="card-hd"><div class="card-title">CTR trend</div></div>
-          <div class="leg" id="legCTR" style="margin-bottom:12px"></div>
-          <div style="position:relative;height:200px"><canvas id="cCTR" role="img" aria-label="CTR trend">CTR</canvas></div>
+          <div class="card-top">
+            <div><div class="card-label">CTR %</div><div class="card-hero" id="avgCTRVal"></div></div>
+            <div class="card-leg" id="legC"></div>
+          </div>
+          <div style="position:relative;height:180px"><canvas id="cCTR" role="img" aria-label="CTR trend">CTR</canvas></div>
         </div>
         <div class="chart-card">
-          <div class="card-hd"><div class="card-title">Avg retention</div></div>
-          <div class="leg" id="legRet" style="margin-bottom:12px"></div>
-          <div style="position:relative;height:200px"><canvas id="cRet" role="img" aria-label="Retention trend">Retention</canvas></div>
+          <div class="card-top">
+            <div><div class="card-label">Avg retention %</div><div class="card-hero" id="avgRetVal"></div></div>
+            <div class="card-leg" id="legR"></div>
+          </div>
+          <div style="position:relative;height:180px"><canvas id="cRet" role="img" aria-label="Retention trend">Retention</canvas></div>
         </div>
       </div>
     </div>`;
 
-  // Channel cards
-  const maxViews=Math.max(...sum.map(r=>parseFloat(r['Total Views'])||0));
-  document.getElementById('chCards').innerHTML = sum
-    .sort((a,b)=>(parseFloat(b['Total Views'])||0)-(parseFloat(a['Total Views'])||0))
-    .map(r=>{
-      const ch=r['Channel']; const color=chColor(ch);
-      const initials=ch.split(' ').map(w=>w[0]).join('').substring(0,3).toUpperCase();
-      const v=parseFloat(r['Total Views'])||0;
-      const wh=parseFloat(r['Total Watch Hours'])||0;
-      const rev=parseFloat(r['Total Revenue ($)'])||0;
-      const ctr=parseFloat(r['Avg CTR (%)'])||0;
-      const ret=parseFloat(r['Avg Retention %'])||0;
-      const vc=parseFloat(r['Video Count'])||0;
-      const barPct=maxViews?Math.round((v/maxViews)*100):0;
+  document.getElementById('avgCTRVal').textContent=actr.toFixed(1)+'%';
+  document.getElementById('avgRetVal').textContent=aret.toFixed(1)+'%';
 
-      // YoY for this channel
-      const chYoys=lastTwo.length===2?lastTwo.map(yr=>byYearCh[`${yr}|${ch}`]||{}):[];
-      const viewsP=chYoys.length===2?pct(chYoys[1].views||0,chYoys[0].views||1):null;
-      const revP  =chYoys.length===2?pct(chYoys[1].rev||0,  chYoys[0].rev||1  ):null;
+  function mkLeg(id){document.getElementById(id).innerHTML=chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('');}
+  ['legV','legC','legR'].forEach(mkLeg);
 
-      return `<div class="ch-perf-card">
-        <div class="ch-perf-header">
-          <div class="ch-perf-avatar" style="background:${color}22;color:${color}">${initials}</div>
-          <div>
-            <div class="ch-perf-name">${ch}</div>
-            <div class="ch-perf-handle">${vc.toLocaleString()} videos indexed</div>
-          </div>
-        </div>
-        <div class="ch-perf-body">
-          <div class="ch-stat-row">
-            <div class="ch-stat"><div class="ch-stat-val" style="color:${color}">${fmtNum(v)}</div><div class="ch-stat-lbl">Views</div></div>
-            <div class="ch-stat"><div class="ch-stat-val">${fmtNum(wh)}</div><div class="ch-stat-lbl">Watch hrs</div></div>
-            <div class="ch-stat"><div class="ch-stat-val">${fmtD(rev)}</div><div class="ch-stat-lbl">Revenue</div></div>
-          </div>
-          <div class="ch-stat-row">
-            <div class="ch-stat"><div class="ch-stat-val">${ctr.toFixed(1)}%</div><div class="ch-stat-lbl">CTR</div></div>
-            <div class="ch-stat"><div class="ch-stat-val">${ret.toFixed(1)}%</div><div class="ch-stat-lbl">Retention</div></div>
-            <div class="ch-stat"><div class="ch-stat-val">${fmtD(rev/Math.max(vc,1))}</div><div class="ch-stat-lbl">Rev/Video</div></div>
-          </div>
-          <div class="ch-perf-bar"><div class="ch-perf-bar-fill" style="width:${barPct}%;background:${color}"></div></div>
-          ${viewsP!==null||revP!==null?`<div class="ch-yoy">
-            ${viewsP!==null?`<span class="yoy-tag ${viewsP>=0?'yoy-up':'yoy-dn'}">Views ${fmtPct(viewsP)}</span>`:''}
-            ${revP!==null?`<span class="yoy-tag ${revP>=0?'yoy-up':'yoy-dn'}">Rev ${fmtPct(revP)}</span>`:''}
-            <span class="yoy-tag yoy-neu">${lastTwo[0]}→${lastTwo[1]}</span>
-          </div>`:''}
-        </div>
-      </div>`;
-    }).join('');
+  const mkDs=(col,fill=false)=>chs.map(ch=>({
+    label:ch,
+    data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:fill&&chs.length===1,
+    tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+  }));
 
-  // Charts
-  function mkLeg(id,items){document.getElementById(id).innerHTML=items.map(([l,c])=>`<span class="leg-item"><span class="leg-bar" style="background:${c}"></span>${l}</span>`).join('');}
-
-  mkLeg('legViews',chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
-  CHARTS.views=new Chart(document.getElementById('cViews'),{
-    type:'line',
-    data:{labels:periods,datasets:chs.map(ch=>({
-      label:ch,
-      data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),
-      borderColor:chColor(ch),backgroundColor:chColor(ch)+'15',fill:chs.length===1,tension:0.4,pointRadius:2,pointHoverRadius:5,borderWidth:2,spanGaps:true
-    }))},
-    options:cOpts(v=>fmtNum(v))
-  });
-
-  mkLeg('legCTR',chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
-  CHARTS.ctr=new Chart(document.getElementById('cCTR'),{
-    type:'line',
-    data:{labels:periods,datasets:chs.map(ch=>({
-      label:ch,
-      data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),
-      borderColor:chColor(ch),backgroundColor:'transparent',tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true
-    }))},
-    options:cOpts(v=>v.toFixed(1)+'%')
-  });
-
-  mkLeg('legRet',chs.map(ch=>[ch.split(' ')[0],chColor(ch)]));
-  CHARTS.ret=new Chart(document.getElementById('cRet'),{
-    type:'line',
-    data:{labels:periods,datasets:chs.map(ch=>({
-      label:ch,
-      data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg Retention %'])||null:null;}),
-      borderColor:chColor(ch),backgroundColor:'transparent',tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true
-    }))},
-    options:cOpts(v=>v.toFixed(1)+'%')
-  });
+  _charts.v=new Chart(document.getElementById('cViews'),{type:'line',data:{labels:periods,datasets:mkDs('Views',true)},options:chartDefaults(v=>fmtN(v))});
+  _charts.c=new Chart(document.getElementById('cCTR'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:chartDefaults(v=>v.toFixed(1)+'%')});
+  _charts.r=new Chart(document.getElementById('cRet'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Retention %')},options:chartDefaults(v=>v.toFixed(1)+'%')});
 }
 
 // ── YOY ──────────────────────────────────────────────────────
-function renderYoY() {
+function renderYoY(){
   const mo=S.data.monthly;
   const years=getYears();
   const chs=S.channel==='ALL'?[...new Set(mo.map(r=>r['Channel']))]:[S.channel];
@@ -759,260 +611,299 @@ function renderYoY() {
   const byYC={};
   mo.forEach(r=>{
     const key=`${r['Year']}|${r['Channel']}`;
-    if(!byYC[key])byYC[key]={yr:+r['Year'],ch:r['Channel'],views:0,wh:0,rev:0,imp:0,subs:0,ctrSum:0,retSum:0,count:0};
+    if(!byYC[key])byYC[key]={views:0,wh:0,rev:0,imp:0,subs:0,ctrSum:0,retSum:0,count:0};
     const d=byYC[key];
-    d.views+=parseFloat(r['Views'])||0; d.wh+=parseFloat(r['Watch Hours'])||0;
-    d.rev+=parseFloat(r['Revenue ($)'])||0; d.imp+=parseFloat(r['Impressions'])||0;
-    d.subs+=parseFloat(r['Subscribers'])||0;
-    d.ctrSum+=parseFloat(r['Avg CTR (%)'])||0; d.retSum+=parseFloat(r['Avg Retention %'])||0; d.count++;
+    d.views+=parseFloat(r['Views'])||0;d.wh+=parseFloat(r['Watch Hours'])||0;
+    d.rev+=parseFloat(r['Revenue ($)'])||0;d.imp+=parseFloat(r['Impressions'])||0;
+    d.subs+=parseFloat(r['Subscribers'])||0;d.ctrSum+=parseFloat(r['Avg CTR (%)'])||0;
+    d.retSum+=parseFloat(r['Avg Retention %'])||0;d.count++;
+  });
+  const get=(yr,ch,k)=>(byYC[`${yr}|${ch}`]||{})[k]||0;
+
+  const totals=years.map(yr=>({
+    yr,
+    views:chs.reduce((s,ch)=>s+get(yr,ch,'views'),0),
+    rev:chs.reduce((s,ch)=>s+get(yr,ch,'rev'),0),
+    subs:chs.reduce((s,ch)=>s+get(yr,ch,'subs'),0),
+  }));
+
+  // Monthly views per year — for stacked area
+  const periods12=MO.map(m=>m);
+  const yearDatasets=years.map((yr,i)=>{
+    const color=PAL[i%PAL.length];
+    return{
+      label:String(yr),
+      data:MO.map((_,mi)=>{
+        const rows=mo.filter(r=>+r['Year']===yr&&+r['Month']===mi+1&&(S.channel==='ALL'||r['Channel']===S.channel));
+        return rows.reduce((s,r)=>s+(parseFloat(r['Views'])||0),0)||null;
+      }),
+      borderColor:color,backgroundColor:color+'22',fill:true,tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+    };
   });
 
-  const get=(yr,ch,k)=>(byYC[`${yr}|${ch}`]||{})[k]||0;
-  const getA=(yr,ch,k)=>{const d=byYC[`${yr}|${ch}`];return d&&d.count?d[k]/d.count:0;};
+  const cols=`2fr ${years.map(()=>'90px').join(' ')} ${years.length>1?'80px':''}`;
 
-  const totals=years.map(yr=>({yr,views:chs.reduce((s,ch)=>s+get(yr,ch,'views'),0),rev:chs.reduce((s,ch)=>s+get(yr,ch,'rev'),0),subs:chs.reduce((s,ch)=>s+get(yr,ch,'subs'),0)}));
-
-  const cols=`2fr ${years.map(()=>'90px 90px').join(' ')}`;
-
-  document.getElementById('mainContent').innerHTML = `
-    <div class="hero fade-up">
-      <div class="hero-eyebrow">Year-over-Year Analysis</div>
-      <div class="hero-title">Growth Report</div>
-      <div class="hero-sub">${years.join(' · ')} · ${chs.length} channel${chs.length!==1?'s':''}</div>
+  document.getElementById('mainContent').innerHTML=`
+    <div class="page-top fade">
+      <div>
+        <div class="page-eyebrow">Analysis</div>
+        <div class="page-title">Year-over-<em>Year</em></div>
+      </div>
     </div>
-    <div class="content">
-      <div class="stat-hero fade-up fade-up-1">
+    <div class="content fade">
+
+      <div class="stat-row">
         ${totals.map((t,i)=>{
           const prev=totals[i-1];
           const vP=prev?pct(t.views,prev.views):null;
           const rP=prev?pct(t.rev,prev.rev):null;
-          return `
-          <div class="stat-block s${(i%6)+1}">
+          return`
+          <div class="stat-cell">
             <div class="stat-eyebrow">Views ${t.yr}</div>
-            <div class="stat-num">${fmtNum(t.views)}</div>
-            ${vP!==null?`<div class="stat-delta"><span class="delta-dot" style="background:${vP>=0?'var(--green)':'var(--red)'}"></span><span class="${vP>=0?'delta-up':'delta-dn'}">${fmtPct(vP)} YoY</span></div>`:''}
+            <div class="stat-num">${fmtN(t.views)}</div>
+            ${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> <span>vs ${years[i-1]}</span></div>`:'<div class="stat-sub">baseline year</div>'}
           </div>
-          <div class="stat-block s${(i%6)+2}">
+          <div class="stat-cell">
             <div class="stat-eyebrow">Revenue ${t.yr}</div>
             <div class="stat-num">${fmtD(t.rev)}</div>
-            ${rP!==null?`<div class="stat-delta"><span class="delta-dot" style="background:${rP>=0?'var(--green)':'var(--red)'}"></span><span class="${rP>=0?'delta-up':'delta-dn'}">${fmtPct(rP)} YoY</span></div>`:''}
+            ${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> <span>vs ${years[i-1]}</span></div>`:'<div class="stat-sub">baseline year</div>'}
           </div>`;
         }).join('')}
       </div>
 
-      <div class="charts-grid fade-up fade-up-2">
-        <div class="chart-card">
-          <div class="card-hd"><div class="card-title">Views by year</div>
-          <div class="leg" id="yLeg1"></div></div>
-          <div style="position:relative;height:240px"><canvas id="yViews" role="img" aria-label="Views by year">YoY views</canvas></div>
+      <div class="section-head"><div class="section-label">Monthly views by year</div><div class="section-line"></div></div>
+      <div class="charts-grid">
+        <div class="chart-card wide">
+          <div class="card-top">
+            <div><div class="card-label">Views — monthly comparison</div></div>
+            <div class="card-leg">${years.map((yr,i)=>`<span class="leg-txt"><span class="leg-dot" style="background:${PAL[i%PAL.length]}"></span>${yr}</span>`).join('')}</div>
+          </div>
+          <div style="position:relative;height:240px"><canvas id="yoyArea" role="img" aria-label="Yearly views overlaid by month">YoY area</canvas></div>
         </div>
         <div class="chart-card">
-          <div class="card-hd"><div class="card-title">Revenue by year</div>
-          <div class="leg" id="yLeg2"></div></div>
-          <div style="position:relative;height:240px"><canvas id="yRev" role="img" aria-label="Revenue by year">YoY revenue</canvas></div>
+          <div class="card-top"><div class="card-label">Total views by year</div></div>
+          <div style="position:relative;height:200px"><canvas id="yoyBar" role="img" aria-label="Total views per year bar chart">YoY views bar</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-top"><div class="card-label">Revenue by year</div></div>
+          <div style="position:relative;height:200px"><canvas id="yoyRev" role="img" aria-label="Revenue per year bar chart">YoY revenue</canvas></div>
         </div>
       </div>
 
-      <div class="section-hd fade-up fade-up-3">
-        <div class="section-title">Channel Breakdown</div>
-        <div class="section-rule"></div>
-      </div>
-      <div class="yoy-table fade-up fade-up-3">
-        <div class="yoy-thead" style="grid-template-columns:${cols}">
+      <div class="section-head"><div class="section-label">Channel breakdown</div><div class="section-line"></div></div>
+      <div class="data-table">
+        <div class="dt-head" style="grid-template-columns:${cols}">
           <span>Channel</span>
-          ${years.map(yr=>`<span class="yr-header">${yr} Views</span><span class="yr-header">${yr} Rev</span>`).join('')}
+          ${years.map(yr=>`<span>${yr} Views</span>`).join('')}
+          ${years.length>1?`<span>Change</span>`:''}
         </div>
         ${chs.map(ch=>{
           const color=chColor(ch);
-          return `<div class="yoy-trow" style="grid-template-columns:${cols}">
-            <div class="ch-tag"><div class="ch-tag-dot" style="background:${color}"></div><div class="ch-tag-name">${ch}</div></div>
-            ${years.map((yr,i)=>{
-              const v=get(yr,ch,'views'), r=get(yr,ch,'rev');
-              const prevYr=years[i-1];
-              const vP=prevYr?pct(v,get(prevYr,ch,'views')):null;
-              const rP=prevYr?pct(r,get(prevYr,ch,'rev')):null;
-              return `
-              <div>
-                <div class="num-cell">${fmtNum(v)}</div>
-                ${vP!==null?`<div class="delta-cell ${vP>=0?'delta-up':'delta-dn'}">${fmtPct(vP)}</div>`:''}
-              </div>
-              <div>
-                <div class="num-cell">${fmtD(r)}</div>
-                ${rP!==null?`<div class="delta-cell ${rP>=0?'delta-up':'delta-dn'}">${fmtPct(rP)}</div>`:''}
-              </div>`;
-            }).join('')}
+          const vals=years.map(yr=>get(yr,ch,'views'));
+          const chng=vals.length>1?pct(vals[vals.length-1],vals[0]):null;
+          return`<div class="dt-row" style="grid-template-columns:${cols}">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:8px;height:8px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span>
+              <span class="dt-name">${ch}</span>
+            </div>
+            ${vals.map(v=>`<div class="mono-cell">${fmtN(v)}</div>`).join('')}
+            ${chng!==null?`<div class="${chng>=0?'delta-up':'delta-dn'}">${fmtP(chng)}</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="section-head" style="margin-top:24px"><div class="section-label">Revenue breakdown</div><div class="section-line"></div></div>
+      <div class="data-table">
+        <div class="dt-head" style="grid-template-columns:${cols}">
+          <span>Channel</span>
+          ${years.map(yr=>`<span>${yr} Revenue</span>`).join('')}
+          ${years.length>1?`<span>Change</span>`:''}
+        </div>
+        ${chs.map(ch=>{
+          const color=chColor(ch);
+          const vals=years.map(yr=>get(yr,ch,'rev'));
+          const chng=vals.length>1&&vals[0]?pct(vals[vals.length-1],vals[0]):null;
+          return`<div class="dt-row" style="grid-template-columns:${cols}">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:8px;height:8px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span>
+              <span class="dt-name">${ch}</span>
+            </div>
+            ${vals.map(v=>`<div class="mono-cell">${fmtD(v)}</div>`).join('')}
+            ${chng!==null?`<div class="${chng>=0?'delta-up':'delta-dn'}">${fmtP(chng)}</div>`:''}
           </div>`;
         }).join('')}
       </div>
     </div>`;
 
-  const yColors=['#f0b429','#00e5ff','#00e096','#a78bfa'];
-  const chLabels=chs.map(ch=>ch.length>14?ch.substring(0,12)+'…':ch);
-  function mkLeg(id,items){document.getElementById(id).innerHTML=items.map(([l,c])=>`<span class="leg-item"><span class="leg-bar" style="background:${c}"></span>${l}</span>`).join('');}
-  mkLeg('yLeg1',years.map((yr,i)=>[String(yr),yColors[i%yColors.length]]));
-  mkLeg('yLeg2',years.map((yr,i)=>[String(yr),yColors[i%yColors.length]]));
-
-  const barOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e1e38',titleColor:'#fff',bodyColor:'#9494b8',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,cornerRadius:8}},scales:{y:{ticks:{font:{size:11,family:"'JetBrains Mono'"},color:'#6a6a8a'},grid:{color:'rgba(255,255,255,0.04)'},border:{display:false}},x:{ticks:{font:{size:10,family:"'JetBrains Mono'"},color:'#6a6a8a'},grid:{display:false},border:{display:false}}}};
-
-  CHARTS.yv=new Chart(document.getElementById('yViews'),{type:'bar',
-    data:{labels:chLabels,datasets:years.map((yr,i)=>({label:String(yr),data:chs.map(ch=>get(yr,ch,'views')),backgroundColor:yColors[i%yColors.length]+'cc',borderRadius:4,borderSkipped:false}))},
-    options:{...barOpts,scales:{...barOpts.scales,y:{...barOpts.scales.y,ticks:{...barOpts.scales.y.ticks,callback:v=>fmtNum(v)}}}}
+  _charts.yoyArea=new Chart(document.getElementById('yoyArea'),{
+    type:'line',data:{labels:MO,datasets:yearDatasets},
+    options:chartDefaults(v=>fmtN(v),{plugins:{tooltip:{mode:'index',intersect:false}}})
   });
-  CHARTS.yr=new Chart(document.getElementById('yRev'),{type:'bar',
-    data:{labels:chLabels,datasets:years.map((yr,i)=>({label:String(yr),data:chs.map(ch=>get(yr,ch,'rev')),backgroundColor:yColors[i%yColors.length]+'cc',borderRadius:4,borderSkipped:false}))},
-    options:{...barOpts,scales:{...barOpts.scales,y:{...barOpts.scales.y,ticks:{...barOpts.scales.y.ticks,callback:v=>'$'+fmtNum(v)}}}}
+  const chLabels=chs.map(ch=>ch.length>16?ch.substring(0,14)+'…':ch);
+  const yrColors=years.map((_,i)=>PAL[i%PAL.length]);
+  _charts.yoyB=new Chart(document.getElementById('yoyBar'),{
+    type:'bar',
+    data:{labels:chLabels,datasets:years.map((yr,i)=>({label:String(yr),data:chs.map(ch=>get(yr,ch,'views')),backgroundColor:yrColors[i]+'cc',borderRadius:3,borderSkipped:false}))},
+    options:chartDefaults(v=>fmtN(v))
+  });
+  _charts.yoyR=new Chart(document.getElementById('yoyRev'),{
+    type:'bar',
+    data:{labels:chLabels,datasets:years.map((yr,i)=>({label:String(yr),data:chs.map(ch=>get(yr,ch,'rev')),backgroundColor:yrColors[i]+'cc',borderRadius:3,borderSkipped:false}))},
+    options:chartDefaults(v=>'$'+fmtN(v))
   });
 }
 
 // ── MONTHLY ───────────────────────────────────────────────────
-function renderMonthly() {
+function renderMonthly(){
   const mo=filterMo(S.data.monthly);
   const chs=S.channel==='ALL'?[...new Set(mo.map(r=>r['Channel']))]:[S.channel];
   const periods=sortPeriods([...new Set(mo.map(r=>r['Period']))]);
 
   document.getElementById('mainContent').innerHTML=`
-    <div class="hero fade-up">
-      <div class="hero-eyebrow">Monthly Trends</div>
-      <div class="hero-title">Time Series</div>
-      <div class="hero-sub">${periods.length} months of data</div>
-      <div class="hero-actions">${filterBarHTML()}</div>
+    <div class="page-top fade">
+      <div><div class="page-eyebrow">Trends</div><div class="page-title">Monthly <em>Breakdown</em></div></div>
+      ${filterBar()}
     </div>
-    <div class="content">
-      <div class="charts-grid fade-up fade-up-1">
+    <div class="content fade">
+      <div class="charts-grid">
         <div class="chart-card wide">
-          <div class="card-hd"><div class="card-title">Views over time</div><div class="leg" id="mLeg1"></div></div>
-          <div style="position:relative;height:260px"><canvas id="mViews" role="img" aria-label="Monthly views">Monthly views</canvas></div>
+          <div class="card-top">
+            <div class="card-label">Views over time</div>
+            <div class="card-leg">${chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('')}</div>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="mV" role="img" aria-label="Monthly views">Views</canvas></div>
         </div>
         <div class="chart-card">
-          <div class="card-hd"><div class="card-title">Impressions</div><div class="leg" id="mLeg2"></div></div>
-          <div style="position:relative;height:200px"><canvas id="mImp" role="img" aria-label="Monthly impressions">Impressions</canvas></div>
+          <div class="card-top">
+            <div class="card-label">Impressions</div>
+            <div class="card-leg">${chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('')}</div>
+          </div>
+          <div style="position:relative;height:190px"><canvas id="mI" role="img" aria-label="Monthly impressions">Impressions</canvas></div>
         </div>
         <div class="chart-card">
-          <div class="card-hd"><div class="card-title">CTR %</div><div class="leg" id="mLeg3"></div></div>
-          <div style="position:relative;height:200px"><canvas id="mCTR" role="img" aria-label="Monthly CTR">CTR</canvas></div>
+          <div class="card-top">
+            <div class="card-label">CTR %</div>
+            <div class="card-leg">${chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('')}</div>
+          </div>
+          <div style="position:relative;height:190px"><canvas id="mC" role="img" aria-label="Monthly CTR">CTR</canvas></div>
         </div>
       </div>
-      <div class="section-hd fade-up fade-up-2"><div class="section-title">Monthly Data</div><div class="section-rule"></div></div>
-      <div class="yoy-table fade-up fade-up-2">
-        <div class="yoy-thead" style="grid-template-columns:1.2fr 1fr 70px 90px 80px 90px 90px 70px 70px 60px">
+      <div class="section-head"><div class="section-label">Monthly data</div><div class="section-line"></div></div>
+      <div class="data-table">
+        <div class="dt-head" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px 60px">
           <span>Channel</span><span>Period</span><span>Videos</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span><span>Subs</span>
         </div>
-        ${mo.sort((a,b)=>{const [am,ay]=(a['Period']||'').split(' ');const [bm,by]=(b['Period']||'').split(' ');return(+by-+ay)||(MONTH_NAMES.indexOf(bm)-MONTH_NAMES.indexOf(am));}).map(r=>{
+        ${mo.sort((a,b)=>{const[am,ay]=(a['Period']||'').split(' ');const[bm,by]=(b['Period']||'').split(' ');return(+by-+ay)||(MO.indexOf(bm)-MO.indexOf(am));}).map(r=>{
           const color=chColor(r['Channel']);const ret=parseFloat(r['Avg Retention %'])||0;
-          return `<div class="yoy-trow" style="grid-template-columns:1.2fr 1fr 70px 90px 80px 90px 90px 70px 70px 60px">
-            <div class="ch-tag"><div class="ch-tag-dot" style="background:${color}"></div><span style="font-size:13px;font-weight:600">${r['Channel']}</span></div>
-            <div class="num-cell" style="color:var(--muted2)">${r['Period']}</div>
-            <div class="num-cell">${r['Video Count']||0}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Views'])||0)}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Watch Hours'])||0)}</div>
-            <div class="num-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Impressions'])||0)}</div>
-            <div class="num-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
-            <div><div class="num-cell">${ret.toFixed(1)}%</div><div class="ret-bar-bg" style="height:2px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:3px"><div style="height:100%;width:${Math.min(ret*2,100)}%;background:${color};border-radius:2px"></div></div></div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Subscribers'])||0)}</div>
+          return`<div class="dt-row" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px 60px">
+            <div style="display:flex;align-items:center;gap:7px"><span style="width:7px;height:7px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${r['Channel']}</span></div>
+            <div class="mono-cell" style="color:var(--ink3)">${r['Period']}</div>
+            <div class="mono-cell">${r['Video Count']||0}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div>
+            <div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Impressions'])||0)}</div>
+            <div class="mono-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
+            <div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Subscribers'])||0)}</div>
           </div>`;
         }).join('')}
       </div>
     </div>`;
 
-  function mkLeg(id){document.getElementById(id).innerHTML=chs.map(ch=>`<span class="leg-item"><span class="leg-bar" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('');}
-  ['mLeg1','mLeg2','mLeg3'].forEach(mkLeg);
-
-  const mkDs=(col)=>chs.map(ch=>({label:ch,data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),borderColor:chColor(ch),backgroundColor:chColor(ch)+'15',fill:chs.length===1,tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true}));
-
-  CHARTS.mv=new Chart(document.getElementById('mViews'),{type:'line',data:{labels:periods,datasets:mkDs('Views')},options:cOpts(v=>fmtNum(v))});
-  CHARTS.mi=new Chart(document.getElementById('mImp'),{type:'line',data:{labels:periods,datasets:mkDs('Impressions')},options:cOpts(v=>fmtNum(v))});
-  CHARTS.mc=new Chart(document.getElementById('mCTR'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:cOpts(v=>v.toFixed(1)+'%')});
+  const mkDs=(col)=>chs.map(ch=>({
+    label:ch,
+    data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:chs.length===1,tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+  }));
+  _charts.mv=new Chart(document.getElementById('mV'),{type:'line',data:{labels:periods,datasets:mkDs('Views')},options:chartDefaults(v=>fmtN(v))});
+  _charts.mi=new Chart(document.getElementById('mI'),{type:'line',data:{labels:periods,datasets:mkDs('Impressions')},options:chartDefaults(v=>fmtN(v))});
+  _charts.mc=new Chart(document.getElementById('mC'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:chartDefaults(v=>v.toFixed(1)+'%')});
 }
 
 // ── PER-VIDEO ─────────────────────────────────────────────────
-function renderPerVideo() {
+function renderPerVideo(){
   const pv=(S.channel==='ALL'?S.data.pervideo:S.data.pervideo.filter(r=>r['Channel']===S.channel)).filter(r=>inRange(+r['Year'],+r['Month']));
   const chs=S.channel==='ALL'?[...new Set(pv.map(r=>r['Channel']))]:[S.channel];
   const periods=sortPeriods([...new Set(pv.map(r=>r['Period']))]);
 
   document.getElementById('mainContent').innerHTML=`
-    <div class="hero fade-up">
-      <div class="hero-eyebrow">Content Efficiency</div>
-      <div class="hero-title">Per-Video Averages</div>
-      <div class="hero-sub">Average performance per video published each month</div>
-      <div class="hero-actions">${filterBarHTML()}</div>
+    <div class="page-top fade">
+      <div><div class="page-eyebrow">Content Efficiency</div><div class="page-title">Per-Video <em>Averages</em></div></div>
+      ${filterBar()}
     </div>
-    <div class="content">
-      <div class="charts-grid fade-up fade-up-1">
-        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg views / video</div><div class="leg" id="pvL1"></div></div><div style="position:relative;height:200px"><canvas id="pvV" role="img" aria-label="Avg views per video">Avg views</canvas></div></div>
-        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg revenue / video</div><div class="leg" id="pvL2"></div></div><div style="position:relative;height:200px"><canvas id="pvR" role="img" aria-label="Avg revenue per video">Avg revenue</canvas></div></div>
-        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg impressions / video</div><div class="leg" id="pvL3"></div></div><div style="position:relative;height:200px"><canvas id="pvI" role="img" aria-label="Avg impressions per video">Avg impressions</canvas></div></div>
-        <div class="chart-card"><div class="card-hd"><div class="card-title">Avg CTR / video</div><div class="leg" id="pvL4"></div></div><div style="position:relative;height:200px"><canvas id="pvC" role="img" aria-label="Avg CTR per video">Avg CTR</canvas></div></div>
+    <div class="content fade">
+      <div class="charts-grid">
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg views / video</div></div><div style="position:relative;height:200px"><canvas id="pvV" role="img" aria-label="Avg views per video">Avg views</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg revenue / video</div></div><div style="position:relative;height:200px"><canvas id="pvR" role="img" aria-label="Avg revenue per video">Avg revenue</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg impressions / video</div></div><div style="position:relative;height:200px"><canvas id="pvI" role="img" aria-label="Avg impressions per video">Avg impressions</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg CTR / video</div></div><div style="position:relative;height:200px"><canvas id="pvC" role="img" aria-label="Avg CTR per video">Avg CTR</canvas></div></div>
       </div>
-      <div class="section-hd fade-up fade-up-2"><div class="section-title">Per-Video Detail</div><div class="section-rule"></div></div>
-      <div class="yoy-table fade-up fade-up-2">
-        <div class="yoy-thead" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px">
+      <div class="section-head"><div class="section-label">Per-video detail</div><div class="section-line"></div></div>
+      <div class="data-table">
+        <div class="dt-head" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px">
           <span>Channel</span><span>Period</span><span>Videos</span><span>Avg views</span><span>Avg watch hrs</span><span>Avg revenue</span><span>Avg impressions</span><span>Avg CTR</span><span>Avg retention</span>
         </div>
-        ${pv.sort((a,b)=>{const [am,ay]=(a['Period']||'').split(' ');const [bm,by]=(b['Period']||'').split(' ');return(+by-+ay)||(MONTH_NAMES.indexOf(bm)-MONTH_NAMES.indexOf(am));}).map(r=>{
+        ${pv.sort((a,b)=>{const[am,ay]=(a['Period']||'').split(' ');const[bm,by]=(b['Period']||'').split(' ');return(+by-+ay)||(MO.indexOf(bm)-MO.indexOf(am));}).map(r=>{
           const color=chColor(r['Channel']);
-          return `<div class="yoy-trow" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px">
-            <div class="ch-tag"><div class="ch-tag-dot" style="background:${color}"></div><span style="font-size:13px;font-weight:600">${r['Channel']}</span></div>
-            <div class="num-cell" style="color:var(--muted2)">${r['Period']}</div>
-            <div class="num-cell">${r['Video Count']||0}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Avg Views'])||0)}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Avg Watch Hours'])||0)}</div>
-            <div class="num-cell">${fmtD(parseFloat(r['Avg Revenue ($)'])||0)}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Avg Impressions'])||0)}</div>
-            <div class="num-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
-            <div class="num-cell">${(parseFloat(r['Avg Retention %'])||0).toFixed(1)}%</div>
+          return`<div class="dt-row" style="grid-template-columns:1.2fr 1fr 60px 90px 80px 90px 90px 70px 70px">
+            <div style="display:flex;align-items:center;gap:7px"><span style="width:7px;height:7px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${r['Channel']}</span></div>
+            <div class="mono-cell" style="color:var(--ink3)">${r['Period']}</div>
+            <div class="mono-cell">${r['Video Count']||0}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Avg Views'])||0)}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Avg Watch Hours'])||0)}</div>
+            <div class="mono-cell">${fmtD(parseFloat(r['Avg Revenue ($)'])||0)}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Avg Impressions'])||0)}</div>
+            <div class="mono-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
+            <div class="mono-cell">${(parseFloat(r['Avg Retention %'])||0).toFixed(1)}%</div>
           </div>`;
         }).join('')}
       </div>
     </div>`;
 
-  function mkLeg(id){document.getElementById(id).innerHTML=chs.map(ch=>`<span class="leg-item"><span class="leg-bar" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('');}
-  ['pvL1','pvL2','pvL3','pvL4'].forEach(mkLeg);
-  const mkDs=(col,fill=false)=>chs.map(ch=>({label:ch,data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0.4,pointRadius:2,borderWidth:2,spanGaps:true}));
-  CHARTS.pvv=new Chart(document.getElementById('pvV'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Views',chs.length===1)},options:cOpts(v=>fmtNum(v))});
-  CHARTS.pvr=new Chart(document.getElementById('pvR'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Revenue ($)')},options:cOpts(v=>'$'+v.toFixed(0))});
-  CHARTS.pvi=new Chart(document.getElementById('pvI'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Impressions')},options:cOpts(v=>fmtNum(v))});
-  CHARTS.pvc=new Chart(document.getElementById('pvC'),{type:'line',data:{labels:periods,datasets:mkDs('Avg CTR (%)')},options:cOpts(v=>v.toFixed(1)+'%')});
+  const mkDs=(col,fill=false)=>chs.map(ch=>({
+    label:ch,
+    data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+  }));
+  _charts.pvv=new Chart(document.getElementById('pvV'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Views',chs.length===1)},options:chartDefaults(v=>fmtN(v))});
+  _charts.pvr=new Chart(document.getElementById('pvR'),{type:'bar',data:{labels:periods,datasets:chs.map(ch=>({label:ch,data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg Revenue ($)'])||null:null;}),backgroundColor:chColor(ch)+'88',borderRadius:3}))},options:chartDefaults(v=>'$'+v.toFixed(0))});
+  _charts.pvi=new Chart(document.getElementById('pvI'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Impressions')},options:chartDefaults(v=>fmtN(v))});
+  _charts.pvc=new Chart(document.getElementById('pvC'),{type:'bar',data:{labels:periods,datasets:chs.map(ch=>({label:ch,data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),backgroundColor:chColor(ch)+'88',borderRadius:3}))},options:chartDefaults(v=>v.toFixed(1)+'%')});
 }
 
 // ── TOP VIDEOS ────────────────────────────────────────────────
-function renderVideos() {
+function renderVideos(){
   const vids=filterVids(S.data.videos).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,100);
-
   document.getElementById('mainContent').innerHTML=`
-    <div class="hero fade-up">
-      <div class="hero-eyebrow">Content Library</div>
-      <div class="hero-title">Top Videos</div>
-      <div class="hero-sub">${S.channel==='ALL'?'All channels':S.channel} · top 100 by views</div>
-      <div class="hero-actions">${filterBarHTML()}</div>
+    <div class="page-top fade">
+      <div><div class="page-eyebrow">Content Library</div><div class="page-title">Top <em>Videos</em></div></div>
+      ${filterBar()}
     </div>
-    <div class="content">
-      <div class="yoy-table fade-up fade-up-1">
-        <div class="yoy-thead" style="grid-template-columns:3fr 85px 80px 85px 85px 70px 70px">
+    <div class="content fade">
+      <div class="data-table">
+        <div class="dt-head" style="grid-template-columns:3fr 80px 80px 85px 85px 65px 70px">
           <span>Video</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>Impressions</span><span>CTR</span><span>Retention</span>
         </div>
-        ${vids.map((r,idx)=>{
+        ${vids.map(r=>{
           const color=chColor(r['Channel']);const ret=parseFloat(r['Avg Retention %'])||0;
           const pub=r['Published At']?r['Published At'].substring(0,12):'';
-          return `<div class="yoy-trow" style="grid-template-columns:3fr 85px 80px 85px 85px 70px 70px">
+          return`<div class="dt-row" style="grid-template-columns:3fr 80px 80px 85px 85px 65px 70px">
             <div>
-              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${r['Title']||'Untitled'}</div>
-              <div style="display:flex;gap:8px;margin-top:3px;font-family:var(--mono);font-size:10px">
-                <span style="color:${color}">${r['Channel']}</span>
-                ${pub?`<span style="color:var(--muted)">·</span><span style="color:var(--muted)">${pub}</span>`:''}
+              <div class="dt-name">${r['Title']||'Untitled'}</div>
+              <div class="dt-sub" style="display:flex;gap:6px">
+                <span style="color:${color};font-weight:600">${r['Channel']}</span>
+                ${pub?`<span>·</span><span>${pub}</span>`:''}
               </div>
             </div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Views'])||0)}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Watch Hours'])||0)}</div>
-            <div class="num-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
-            <div class="num-cell">${fmtNum(parseFloat(r['Impressions'])||0)}</div>
-            <div class="num-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div>
+            <div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
+            <div class="mono-cell">${fmtN(parseFloat(r['Impressions'])||0)}</div>
+            <div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
             <div>
-              <div class="num-cell">${ret.toFixed(1)}%</div>
-              <div style="height:2px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:3px;width:60px">
-                <div style="height:100%;width:${Math.min(ret*2,100)}%;background:${color};border-radius:2px"></div>
-              </div>
+              <div class="mono-cell">${ret.toFixed(1)}%</div>
+              <div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div>
             </div>
           </div>`;
         }).join('')}
