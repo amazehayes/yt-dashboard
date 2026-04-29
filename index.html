@@ -29,11 +29,11 @@
   --mono: 'IBM Plex Mono', monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
+html { font-size: 16px; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
 
 /* LAYOUT */
-.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
 
 /* SIDEBAR */
 .sidebar {
@@ -46,16 +46,16 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
   height: 100vh;
   overflow-y: auto;
 }
-.logo-block { padding: 28px 20px 24px; border-bottom: 1px solid var(--rule); }
-.logo-sup { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px; }
-.logo-wordmark { font-family: var(--serif); font-size: 22px; color: var(--ink); line-height: 1; }
+.logo-block { padding: 32px 24px 28px; border-bottom: 1px solid var(--rule); }
+.logo-sup { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; }
+.logo-wordmark { font-family: var(--serif); font-size: 28px; color: var(--ink); line-height: 1; }
 .logo-wordmark em { font-style: italic; color: var(--ink3); }
 
-.nav-block { padding: 16px 0; border-bottom: 1px solid var(--rule); }
+.nav-block { padding: 18px 0; border-bottom: 1px solid var(--rule); }
 .nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 20px;
-  font-size: 13px; font-weight: 400;
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 24px;
+  font-size: 15px; font-weight: 400;
   color: var(--ink3);
   cursor: pointer;
   transition: color 0.12s;
@@ -63,29 +63,29 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 }
 .nav-item:hover { color: var(--ink); }
 .nav-item.active { color: var(--ink); font-weight: 600; border-left-color: var(--ink); }
-.nav-icon { width: 14px; height: 14px; flex-shrink: 0; stroke: currentColor; }
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; stroke: currentColor; }
 
-.ch-block { padding: 16px 0; flex: 1; }
-.block-label { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; padding: 0 20px; margin-bottom: 8px; }
+.ch-block { padding: 18px 0; flex: 1; }
+.block-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; padding: 0 24px; margin-bottom: 10px; }
 .ch-row {
-  display: flex; align-items: center; gap: 9px;
-  padding: 7px 20px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 24px;
   cursor: pointer; transition: background 0.1s;
 }
 .ch-row:hover { background: var(--surface2); }
 .ch-row.active { background: var(--surface2); }
-.ch-pip { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.ch-row-name { font-size: 12px; font-weight: 500; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ch-row-name { font-size: 14px; font-weight: 500; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ch-row-name.active { color: var(--ink); }
-.ch-row-stat { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-left: auto; flex-shrink: 0; }
+.ch-row-stat { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-left: auto; flex-shrink: 0; }
 
-.sidebar-foot { padding: 16px 20px; border-top: 1px solid var(--rule); margin-top: auto; }
-.foot-sync { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-bottom: 8px; }
+.sidebar-foot { padding: 18px 24px; border-top: 1px solid var(--rule); margin-top: auto; }
+.foot-sync { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-bottom: 10px; }
 .refresh-btn {
-  width: 100%; padding: 8px 12px;
+  width: 100%; padding: 10px 14px;
   background: var(--ink);
   border: none; border-radius: 5px;
-  color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500;
+  color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 600;
   cursor: pointer; transition: opacity 0.15s;
 }
 .refresh-btn:hover { opacity: 0.8; }
@@ -98,36 +98,36 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .page-top {
   background: var(--white);
   border-bottom: 1px solid var(--rule);
-  padding: 28px 36px 24px;
+  padding: 36px 44px 30px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
 }
-.page-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px; }
-.page-title { font-family: var(--serif); font-size: 32px; line-height: 1; color: var(--ink); }
+.page-eyebrow { font-family: var(--mono); font-size: 12px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px; }
+.page-title { font-family: var(--serif); font-size: 44px; line-height: 1; color: var(--ink); }
 .page-title em { font-style: italic; }
 
 /* FILTER */
-.filter-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.filter-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); }
+.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filter-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); }
 .month-input {
   background: var(--surface2);
   border: 1px solid var(--rule2);
   border-radius: 5px;
-  padding: 5px 8px;
-  font-family: var(--mono); font-size: 11px;
+  padding: 7px 10px;
+  font-family: var(--mono); font-size: 13px;
   color: var(--ink);
   outline: none;
   cursor: pointer;
 }
 .month-input:focus { border-color: var(--ink2); }
-.filter-sep { color: var(--ink3); font-size: 11px; }
+.filter-sep { color: var(--ink3); font-size: 13px; }
 .yr-chip {
-  padding: 4px 10px;
+  padding: 6px 13px;
   border-radius: 4px;
-  font-family: var(--mono); font-size: 10px;
+  font-family: var(--mono); font-size: 12px;
   border: 1px solid var(--rule2);
   background: transparent;
   color: var(--ink3);
@@ -137,69 +137,69 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .yr-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 
 /* CONTENT */
-.content { padding: 28px 36px; }
+.content { padding: 36px 44px; }
 
 /* STAT ROW */
-.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 28px; }
-.stat-cell { padding: 20px 20px 18px; border-right: 1px solid var(--rule); }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 32px; }
+.stat-cell { padding: 26px 24px 22px; border-right: 1px solid var(--rule); }
 .stat-cell:last-child { border-right: none; }
-.stat-eyebrow { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; }
-.stat-num { font-family: var(--serif); font-size: 36px; line-height: 1; color: var(--ink); }
-.stat-sub { font-size: 11px; color: var(--ink3); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
-.up-tag { color: var(--green); font-family: var(--mono); font-size: 10px; background: var(--green-bg); padding: 1px 5px; border-radius: 3px; }
-.dn-tag { color: var(--red); font-family: var(--mono); font-size: 10px; background: var(--red-bg); padding: 1px 5px; border-radius: 3px; }
+.stat-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
+.stat-num { font-family: var(--serif); font-size: 48px; line-height: 1; color: var(--ink); }
+.stat-sub { font-size: 13px; color: var(--ink3); margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+.up-tag { color: var(--green); font-family: var(--mono); font-size: 12px; background: var(--green-bg); padding: 2px 7px; border-radius: 3px; font-weight: 600; }
+.dn-tag { color: var(--red); font-family: var(--mono); font-size: 12px; background: var(--red-bg); padding: 2px 7px; border-radius: 3px; font-weight: 600; }
 
 /* CHART GRID */
-.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
-.chart-card { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 22px 24px; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 32px; }
+.chart-card { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 26px 28px; }
 .chart-card.wide { grid-column: span 2; }
-.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
-.card-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; }
-.card-hero { font-family: var(--serif); font-size: 26px; color: var(--ink); margin-top: 4px; }
-.card-leg { display: flex; gap: 14px; flex-wrap: wrap; }
-.leg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
-.leg-txt { font-family: var(--mono); font-size: 10px; color: var(--ink3); }
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.card-label { font-family: var(--mono); font-size: 12px; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; }
+.card-hero { font-family: var(--serif); font-size: 32px; color: var(--ink); margin-top: 6px; }
+.card-leg { display: flex; gap: 16px; flex-wrap: wrap; }
+.leg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.leg-txt { font-family: var(--mono); font-size: 11px; color: var(--ink3); }
 
 /* SECTION */
-.section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.section-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
+.section-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.section-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
 .section-line { flex: 1; height: 1px; background: var(--rule); }
 
 /* TABLE */
-.data-table { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 28px; }
-.dt-head { display: grid; padding: 11px 20px; border-bottom: 1px solid var(--rule); background: var(--surface2); gap: 8px; }
-.dt-head span { font-family: var(--mono); font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; }
-.dt-row { display: grid; padding: 12px 20px; border-bottom: 1px solid var(--rule); gap: 8px; align-items: center; transition: background 0.08s; }
+.data-table { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 32px; }
+.dt-head { display: grid; padding: 14px 24px; border-bottom: 1px solid var(--rule); background: var(--surface2); gap: 8px; }
+.dt-head span { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; }
+.dt-row { display: grid; padding: 15px 24px; border-bottom: 1px solid var(--rule); gap: 8px; align-items: center; transition: background 0.08s; }
 .dt-row:last-child { border-bottom: none; }
 .dt-row:hover { background: var(--surface2); }
-.dt-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dt-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
-.mono-cell { font-family: var(--mono); font-size: 12px; color: var(--ink2); }
-.ret-track { height: 3px; border-radius: 2px; background: var(--rule); margin-top: 4px; }
+.dt-name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-sub { font-size: 13px; color: var(--ink3); margin-top: 2px; }
+.mono-cell { font-family: var(--mono); font-size: 13px; color: var(--ink2); }
+.ret-track { height: 4px; border-radius: 2px; background: var(--rule); margin-top: 5px; }
 .ret-fill { height: 100%; border-radius: 2px; }
-.delta-up { font-family: var(--mono); font-size: 10px; color: var(--green); }
-.delta-dn { font-family: var(--mono); font-size: 10px; color: var(--red); }
+.delta-up { font-family: var(--mono); font-size: 12px; color: var(--green); font-weight: 600; }
+.delta-dn { font-family: var(--mono); font-size: 12px; color: var(--red); font-weight: 600; }
 
 /* CHANNEL SCORECARD */
-.scorecard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.scorecard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
 .scorecard {
   background: var(--white);
   border: 1px solid var(--rule);
   border-radius: 10px;
   overflow: hidden;
 }
-.sc-head { padding: 16px 20px 14px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 12px; }
-.sc-pip { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.sc-name { font-weight: 700; font-size: 13px; line-height: 1.2; }
-.sc-sub { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-top: 2px; }
-.sc-body { padding: 14px 20px; }
-.sc-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.sc-metric-val { font-family: var(--serif); font-size: 22px; line-height: 1; }
-.sc-metric-lbl { font-family: var(--mono); font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
-.sc-bar { height: 2px; background: var(--rule); border-radius: 1px; margin-top: 14px; overflow: hidden; }
-.sc-bar-fill { height: 100%; border-radius: 1px; transition: width 0.6s ease; }
-.sc-tags { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
-.sc-tag { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 3px; }
+.sc-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 13px; }
+.sc-pip { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.sc-name { font-weight: 700; font-size: 15px; line-height: 1.2; }
+.sc-sub { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-top: 3px; }
+.sc-body { padding: 16px 22px; }
+.sc-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.sc-metric-val { font-family: var(--serif); font-size: 26px; line-height: 1; }
+.sc-metric-lbl { font-family: var(--mono); font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+.sc-bar { height: 3px; background: var(--rule); border-radius: 2px; margin-top: 16px; overflow: hidden; }
+.sc-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+.sc-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.sc-tag { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
 
 /* MODAL */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
@@ -428,10 +428,10 @@ function destroyCharts(){Object.values(_charts).forEach(c=>{try{c.destroy()}catc
 function chartDefaults(yFmt,extra={}){
   return{
     responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#111',bodyColor:'#666',borderColor:'#e2e0da',borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:"'IBM Plex Mono'",size:11},bodyFont:{family:"'IBM Plex Mono'",size:11}},...(extra.plugins||{})},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#111',bodyColor:'#666',borderColor:'#e2e0da',borderWidth:1,padding:12,cornerRadius:6,titleFont:{family:"'IBM Plex Mono'",size:13},bodyFont:{family:"'IBM Plex Mono'",size:13}},...(extra.plugins||{})},
     scales:{
-      y:{ticks:{callback:yFmt,font:{size:10,family:"'IBM Plex Mono'"},color:'#888'},grid:{color:'#f0ede8'},border:{display:false},...(extra.y||{})},
-      x:{ticks:{font:{size:10,family:"'IBM Plex Mono'"},color:'#888',maxRotation:40,autoSkip:true,maxTicksLimit:12},grid:{display:false},border:{display:false},...(extra.x||{})},
+      y:{ticks:{callback:yFmt,font:{size:12,family:"'IBM Plex Mono'"},color:'#888'},grid:{color:'#f0ede8'},border:{display:false},...(extra.y||{})},
+      x:{ticks:{font:{size:12,family:"'IBM Plex Mono'"},color:'#888',maxRotation:40,autoSkip:true,maxTicksLimit:12},grid:{display:false},border:{display:false},...(extra.x||{})},
     },...extra
   };
 }
@@ -565,21 +565,21 @@ function renderOverview(){
             <div><div class="card-label">Monthly views</div></div>
             <div class="card-leg" id="legV"></div>
           </div>
-          <div style="position:relative;height:220px"><canvas id="cViews" role="img" aria-label="Monthly views line chart">Monthly views</canvas></div>
+          <div style="position:relative;height:280px"><canvas id="cViews" role="img" aria-label="Monthly views line chart">Monthly views</canvas></div>
         </div>
         <div class="chart-card">
           <div class="card-top">
             <div><div class="card-label">CTR %</div><div class="card-hero" id="avgCTRVal"></div></div>
             <div class="card-leg" id="legC"></div>
           </div>
-          <div style="position:relative;height:180px"><canvas id="cCTR" role="img" aria-label="CTR trend">CTR</canvas></div>
+          <div style="position:relative;height:240px"><canvas id="cCTR" role="img" aria-label="CTR trend">CTR</canvas></div>
         </div>
         <div class="chart-card">
           <div class="card-top">
             <div><div class="card-label">Avg retention %</div><div class="card-hero" id="avgRetVal"></div></div>
             <div class="card-leg" id="legR"></div>
           </div>
-          <div style="position:relative;height:180px"><canvas id="cRet" role="img" aria-label="Retention trend">Retention</canvas></div>
+          <div style="position:relative;height:240px"><canvas id="cRet" role="img" aria-label="Retention trend">Retention</canvas></div>
         </div>
       </div>
     </div>`;
@@ -594,7 +594,7 @@ function renderOverview(){
     label:ch,
     data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
     borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:fill&&chs.length===1,
-    tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+    tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
   }));
 
   _charts.v=new Chart(document.getElementById('cViews'),{type:'line',data:{labels:periods,datasets:mkDs('Views',true)},options:chartDefaults(v=>fmtN(v))});
@@ -637,7 +637,7 @@ function renderYoY(){
         const rows=mo.filter(r=>+r['Year']===yr&&+r['Month']===mi+1&&(S.channel==='ALL'||r['Channel']===S.channel));
         return rows.reduce((s,r)=>s+(parseFloat(r['Views'])||0),0)||null;
       }),
-      borderColor:color,backgroundColor:color+'22',fill:true,tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+      borderColor:color,backgroundColor:color+'22',fill:true,tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
     };
   });
 
@@ -678,15 +678,15 @@ function renderYoY(){
             <div><div class="card-label">Views — monthly comparison</div></div>
             <div class="card-leg">${years.map((yr,i)=>`<span class="leg-txt"><span class="leg-dot" style="background:${PAL[i%PAL.length]}"></span>${yr}</span>`).join('')}</div>
           </div>
-          <div style="position:relative;height:240px"><canvas id="yoyArea" role="img" aria-label="Yearly views overlaid by month">YoY area</canvas></div>
+          <div style="position:relative;height:300px"><canvas id="yoyArea" role="img" aria-label="Yearly views overlaid by month">YoY area</canvas></div>
         </div>
         <div class="chart-card">
           <div class="card-top"><div class="card-label">Total views by year</div></div>
-          <div style="position:relative;height:200px"><canvas id="yoyBar" role="img" aria-label="Total views per year bar chart">YoY views bar</canvas></div>
+          <div style="position:relative;height:300px"><canvas id="yoyBar" role="img" aria-label="Total views per year bar chart">YoY views bar</canvas></div>
         </div>
         <div class="chart-card">
           <div class="card-top"><div class="card-label">Revenue by year</div></div>
-          <div style="position:relative;height:200px"><canvas id="yoyRev" role="img" aria-label="Revenue per year bar chart">YoY revenue</canvas></div>
+          <div style="position:relative;height:300px"><canvas id="yoyRev" role="img" aria-label="Revenue per year bar chart">YoY revenue</canvas></div>
         </div>
       </div>
 
@@ -771,21 +771,21 @@ function renderMonthly(){
             <div class="card-label">Views over time</div>
             <div class="card-leg">${chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('')}</div>
           </div>
-          <div style="position:relative;height:220px"><canvas id="mV" role="img" aria-label="Monthly views">Views</canvas></div>
+          <div style="position:relative;height:280px"><canvas id="mV" role="img" aria-label="Monthly views">Views</canvas></div>
         </div>
         <div class="chart-card">
           <div class="card-top">
             <div class="card-label">Impressions</div>
             <div class="card-leg">${chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('')}</div>
           </div>
-          <div style="position:relative;height:190px"><canvas id="mI" role="img" aria-label="Monthly impressions">Impressions</canvas></div>
+          <div style="position:relative;height:250px"><canvas id="mI" role="img" aria-label="Monthly impressions">Impressions</canvas></div>
         </div>
         <div class="chart-card">
           <div class="card-top">
             <div class="card-label">CTR %</div>
             <div class="card-leg">${chs.map(ch=>`<span class="leg-txt"><span class="leg-dot" style="background:${chColor(ch)}"></span>${ch.split(' ')[0]}</span>`).join('')}</div>
           </div>
-          <div style="position:relative;height:190px"><canvas id="mC" role="img" aria-label="Monthly CTR">CTR</canvas></div>
+          <div style="position:relative;height:250px"><canvas id="mC" role="img" aria-label="Monthly CTR">CTR</canvas></div>
         </div>
       </div>
       <div class="section-head"><div class="section-label">Monthly data</div><div class="section-line"></div></div>
@@ -814,7 +814,7 @@ function renderMonthly(){
   const mkDs=(col)=>chs.map(ch=>({
     label:ch,
     data:periods.map(p=>{const r=mo.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:chs.length===1,tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+'18',fill:chs.length===1,tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
   }));
   _charts.mv=new Chart(document.getElementById('mV'),{type:'line',data:{labels:periods,datasets:mkDs('Views')},options:chartDefaults(v=>fmtN(v))});
   _charts.mi=new Chart(document.getElementById('mI'),{type:'line',data:{labels:periods,datasets:mkDs('Impressions')},options:chartDefaults(v=>fmtN(v))});
@@ -834,10 +834,10 @@ function renderPerVideo(){
     </div>
     <div class="content fade">
       <div class="charts-grid">
-        <div class="chart-card"><div class="card-top"><div class="card-label">Avg views / video</div></div><div style="position:relative;height:200px"><canvas id="pvV" role="img" aria-label="Avg views per video">Avg views</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">Avg revenue / video</div></div><div style="position:relative;height:200px"><canvas id="pvR" role="img" aria-label="Avg revenue per video">Avg revenue</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">Avg impressions / video</div></div><div style="position:relative;height:200px"><canvas id="pvI" role="img" aria-label="Avg impressions per video">Avg impressions</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">Avg CTR / video</div></div><div style="position:relative;height:200px"><canvas id="pvC" role="img" aria-label="Avg CTR per video">Avg CTR</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg views / video</div></div><div style="position:relative;height:300px"><canvas id="pvV" role="img" aria-label="Avg views per video">Avg views</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg revenue / video</div></div><div style="position:relative;height:300px"><canvas id="pvR" role="img" aria-label="Avg revenue per video">Avg revenue</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg impressions / video</div></div><div style="position:relative;height:300px"><canvas id="pvI" role="img" aria-label="Avg impressions per video">Avg impressions</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg CTR / video</div></div><div style="position:relative;height:300px"><canvas id="pvC" role="img" aria-label="Avg CTR per video">Avg CTR</canvas></div></div>
       </div>
       <div class="section-head"><div class="section-label">Per-video detail</div><div class="section-line"></div></div>
       <div class="data-table">
@@ -864,7 +864,7 @@ function renderPerVideo(){
   const mkDs=(col,fill=false)=>chs.map(ch=>({
     label:ch,
     data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r[col])||null:null;}),
-    borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0.35,pointRadius:0,pointHoverRadius:4,borderWidth:1.5,spanGaps:true
+    borderColor:chColor(ch),backgroundColor:chColor(ch)+(fill?'18':'00'),fill,tension:0.35,pointRadius:0,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
   }));
   _charts.pvv=new Chart(document.getElementById('pvV'),{type:'line',data:{labels:periods,datasets:mkDs('Avg Views',chs.length===1)},options:chartDefaults(v=>fmtN(v))});
   _charts.pvr=new Chart(document.getElementById('pvR'),{type:'bar',data:{labels:periods,datasets:chs.map(ch=>({label:ch,data:periods.map(p=>{const r=pv.find(r=>r['Channel']===ch&&r['Period']===p);return r?parseFloat(r['Avg Revenue ($)'])||null:null;}),backgroundColor:chColor(ch)+'88',borderRadius:3}))},options:chartDefaults(v=>'$'+v.toFixed(0))});
