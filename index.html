@@ -1044,55 +1044,86 @@ function renderVideos(){
 // ── EXEC SUMMARY ─────────────────────────────────────────────
 function renderExecSummary(){
   const chs=S.channels;
-  const sum=S.data.summary.filter(r=>chs.includes(r['Channel']));
-  const mo=filterMo(S.data.monthly);
-  const years=getYears();
-  const lastTwo=years.slice(-2);
-  const tv=agg(sum,'Total Views'),twh=agg(sum,'Total Watch Hours');
-  const tr=agg(sum,'Total Revenue ($)'),ts=agg(sum,'Total Subscribers');
-  const actr=avg(sum,'Avg CTR (%)'),aret=avg(sum,'Avg Retention %');
-  const vc=agg(sum,'Video Count');
-  const byYC={};
-  S.data.monthly.forEach(r=>{
-    const key=`${r['Year']}|${r['Channel']}`;
-    if(!byYC[key])byYC[key]={views:0,rev:0,subs:0};
-    byYC[key].views+=parseFloat(r['Views'])||0;
-    byYC[key].rev+=parseFloat(r['Revenue ($)'])||0;
-    byYC[key].subs+=parseFloat(r['Subscribers'])||0;
-  });
-  const totYr=yr=>({
-    views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
-    rev:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
-    subs:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
-  });
-  const [tPrev,tCurr]=lastTwo.length===2?[totYr(lastTwo[0]),totYr(lastTwo[1])]:[null,null];
-  const vP=tPrev&&tCurr?pct(tCurr.views,tPrev.views):null;
-  const rP=tPrev&&tCurr?pct(tCurr.rev,tPrev.rev):null;
-  const sP=tPrev&&tCurr?pct(tCurr.subs,tPrev.subs):null;
-  const sorted=[...sum].sort((a,b)=>(parseFloat(b['Total Views'])||0)-(parseFloat(a['Total Views'])||0));
-  const best=sorted[0];
-  const moAgg={};
-  mo.forEach(r=>{if(!moAgg[r['Period']])moAgg[r['Period']]=0;moAgg[r['Period']]+=parseFloat(r['Views'])||0;});
-  const bestPeriod=Object.entries(moAgg).sort((a,b)=>b[1]-a[1])[0];
-  const chLabel=chs.length===S.data.summary.length?'all channels':`${chs.length} channel${chs.length!==1?'s':''}`;
-  const yrLabel=lastTwo.length===2?`${lastTwo[0]} to ${lastTwo[1]}`:'the tracked period';
+  const mo=filterMo(S.data.monthly); // filtered by date range + channels
+  const allMo=S.data.monthly.filter(r=>chs.includes(r['Channel'])); // all time, selected channels
   const now=new Date();
   const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
   const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const isSingleMonth=S.from===S.to&&S.from!=='';
   const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'all available data');
   const meetingTitle=isSingleMonth?`${prevMonthName} <em>Review</em>`:`Executive <em>Summary</em>`;
-  let para1=`In ${isSingleMonth?periodLabel:'the selected period'}, across ${chLabel}, the portfolio generated <strong>${fmtN(tv)} views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${vc.toLocaleString()} published videos.`;
-  if(vP!==null) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> compared to ${yrLabel}`;
-  if(rP!==null) para1+=`, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong> over the same window.`;
-  let para2=`Audience quality remains ${actr>=5?'strong':'steady'} with a <strong>${actr.toFixed(1)}% click-through rate</strong> and <strong>${aret.toFixed(1)}% average retention</strong>. Viewers watched <strong>${fmtN(twh)} hours</strong> of content in total.`;
-  if(ts>0) para2+=` The channels added <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` — ${sP>=0?'a gain of':'down'} ${fmtP(Math.abs(sP))} year-over-year`:''}.`;
-  let para3='';
-  if(best){
-    para3=`<strong>${best['Channel']}</strong> leads the portfolio with ${fmtN(parseFloat(best['Total Views'])||0)} views`;
-    if(bestPeriod) para3+=`. The strongest individual month on record was <em>${bestPeriod[0]}</em>, which drove ${fmtN(bestPeriod[1])} views across all channels.`;
-    else para3+='.';
+  const chLabel=chs.length===S.data.summary.length?'all channels':`${chs.length} channel${chs.length!==1?'s':''}`;
+
+  // Aggregate stats from FILTERED monthly rows (correct for the period)
+  const tv=agg(mo,'Views'),twh=agg(mo,'Watch Hours');
+  const tr=agg(mo,'Revenue ($)'),ts=agg(mo,'Subscribers');
+  const actr=avg(mo,'Avg CTR (%)'),aret=avg(mo,'Avg Retention %');
+  const vc=agg(mo,'Video Count');
+
+  // YoY: compare same month(s) last year vs this year
+  let vP=null,rP=null,sP=null,yrLabel='';
+  if(isSingleMonth&&S.from){
+    // Compare Apr 2026 vs Apr 2025
+    const [fy,fm]=S.from.split('-').map(Number);
+    const prevYr=fy-1;
+    const sameMonthPrev=allMo.filter(r=>+r['Year']===prevYr&&+r['Month']===fm);
+    const sameMonthCurr=mo;
+    if(sameMonthPrev.length){
+      const pvViews=agg(sameMonthPrev,'Views');
+      const pvRev=agg(sameMonthPrev,'Revenue ($)');
+      const pvSubs=agg(sameMonthPrev,'Subscribers');
+      vP=pct(tv,pvViews);
+      rP=pct(tr,pvRev||1);
+      sP=pct(ts,pvSubs||1);
+      yrLabel=`${MO[fm-1]} ${prevYr}`;
+    }
+  } else {
+    // Multi-month: compare year totals
+    const years=getYears();
+    const lastTwo=years.slice(-2);
+    if(lastTwo.length===2){
+      const byYC={};
+      allMo.forEach(r=>{
+        const key=`${r['Year']}|${r['Channel']}`;
+        if(!byYC[key])byYC[key]={views:0,rev:0,subs:0};
+        byYC[key].views+=parseFloat(r['Views'])||0;
+        byYC[key].rev+=parseFloat(r['Revenue ($)'])||0;
+        byYC[key].subs+=parseFloat(r['Subscribers'])||0;
+      });
+      const totYr=yr=>({
+        views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
+        rev:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
+        subs:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
+      });
+      const [tPrev,tCurr]=[totYr(lastTwo[0]),totYr(lastTwo[1])];
+      vP=pct(tCurr.views,tPrev.views);
+      rP=pct(tCurr.rev,tPrev.rev||1);
+      sP=pct(tCurr.subs,tPrev.subs||1);
+      yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
+    }
   }
+
+  // Best channel by views in the filtered period
+  const byChViews={};
+  mo.forEach(r=>{if(!byChViews[r['Channel']])byChViews[r['Channel']]=0;byChViews[r['Channel']]+=parseFloat(r['Views'])||0;});
+  const bestCh=Object.entries(byChViews).sort((a,b)=>b[1]-a[1])[0];
+
+  // Best ALL-TIME month (across all data, not filtered)
+  const allMoAgg={};
+  allMo.forEach(r=>{if(!allMoAgg[r['Period']])allMoAgg[r['Period']]=0;allMoAgg[r['Period']]+=parseFloat(r['Views'])||0;});
+  const bestPeriod=Object.entries(allMoAgg).sort((a,b)=>b[1]-a[1])[0];
+
+  // Build paragraphs
+  let para1=`In ${isSingleMonth?periodLabel:'the selected period'}, across ${chLabel}, the portfolio generated <strong>${fmtN(tv)} views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${Math.round(vc).toLocaleString()} videos.`;
+  if(vP!==null&&yrLabel) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> vs. ${yrLabel}, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong> over the same window.`;
+
+  let para2=`Average CTR was <strong>${actr.toFixed(1)}%</strong> with <strong>${aret.toFixed(1)}% retention</strong>. Viewers watched <strong>${fmtN(twh)} hours</strong> of content.`;
+  if(ts>0) para2+=` The channels added <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` (${sP>=0?'+':''}${fmtP(sP)} vs. same period last year)`:''}.`;
+
+  let para3='';
+  if(bestCh) para3+=`<strong>${bestCh[0]}</strong> led the portfolio this period with <strong>${fmtN(bestCh[1])} views</strong>.`;
+  if(bestPeriod&&!isSingleMonth) para3+=` The strongest month on record was <em>${bestPeriod[0]}</em> with ${fmtN(bestPeriod[1])} views across all channels.`;
+
   document.getElementById('mainContent').innerHTML=`
     <div class="page-top fade">
       <div><div class="page-eyebrow">Meeting Mode · ${periodLabel}</div><div class="page-title">${meetingTitle}</div></div>
@@ -1107,10 +1138,10 @@ function renderExecSummary(){
         <div class="exec-meta">Prepared ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${chLabel} · ${periodLabel}</div>
       </div>
       <div class="stat-row">
-        <div class="stat-cell"><div class="stat-eyebrow">Total views</div><div class="stat-num">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> YoY</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> YoY</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${sP!==null?`<div class="stat-sub"><span class="${sP>=0?'up-tag':'dn-tag'}">${fmtP(sP)}</span> YoY</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${sP!==null?`<div class="stat-sub"><span class="${sP>=0?'up-tag':'dn-tag'}">${fmtP(sP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
       </div>
