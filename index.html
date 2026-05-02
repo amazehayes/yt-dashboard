@@ -389,11 +389,12 @@ async function loadData(){
     summary.forEach((r,i)=>{CH[r['Channel']]=PAL[i%PAL.length];});
     // Default: all channels selected
     if(S.channels.length===0) S.channels=summary.map(r=>r['Channel']).filter(Boolean);
-    // Set date range
-    const sorted=monthly.map(r=>({yr:+r['Year'],mo:+r['Month']})).filter(r=>r.yr&&r.mo).sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.mo-b.mo);
-    if(sorted.length&&!S.from){
-      S.from=`${sorted[0].yr}-${String(sorted[0].mo).padStart(2,'0')}`;
-      S.to=`${sorted[sorted.length-1].yr}-${String(sorted[sorted.length-1].mo).padStart(2,'0')}`;
+    // Default date range to previous month
+    if(!S.from){
+      const now=new Date();
+      const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
+      const ym=`${prevMonth.getFullYear()}-${String(prevMonth.getMonth()+1).padStart(2,'0')}`;
+      S.from=ym; S.to=ym;
     }
     document.getElementById('lastSync').textContent='Synced '+new Date().toLocaleTimeString();
     buildSidebar();renderPage();
@@ -502,6 +503,35 @@ function sortPeriods(ps){
 function isYrSel(yr){return S.from===`${yr}-01`&&S.to===`${yr}-12`;}
 function setQuick(f,t){S.from=f;S.to=t;renderPage();}
 
+function isLastMonth(){
+  const now=new Date();
+  const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const ym=`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
+  return S.from===ym&&S.to===ym;
+}
+function setLastMonth(){
+  const now=new Date();
+  const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const ym=`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
+  S.from=ym;S.to=ym;renderPage();
+}
+function setLastNMonths(n){
+  const now=new Date();
+  const to=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const from=new Date(now.getFullYear(),now.getMonth()-n,1);
+  S.from=`${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}`;
+  S.to=`${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}`;
+  renderPage();
+}
+function isLastNMonths(n){
+  const now=new Date();
+  const to=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const from=new Date(now.getFullYear(),now.getMonth()-n,1);
+  const ef=`${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}`;
+  const et=`${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}`;
+  return S.from===ef&&S.to===et;
+}
+
 function filterBar(){
   const years=getYears();
   return `<div class="filter-row">
@@ -510,6 +540,9 @@ function filterBar(){
     <span class="filter-sep">→</span>
     <input class="month-input" type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
     <span class="filter-sep" style="margin-left:4px">·</span>
+    <button class="yr-chip${isLastMonth()?' on':''}" onclick="setLastMonth()">Last month</button>
+    <button class="yr-chip${isLastNMonths(3)?' on':''}" onclick="setLastNMonths(3)">3M</button>
+    <button class="yr-chip${isLastNMonths(12)?' on':''}" onclick="setLastNMonths(12)">12M</button>
     ${years.map(yr=>`<button class="yr-chip${isYrSel(yr)?' on':''}" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`).join('')}
     <button class="yr-chip" onclick="S.from='';S.to='';renderPage()">All</button>
   </div>`;
@@ -1043,21 +1076,26 @@ function renderExecSummary(){
   const bestPeriod=Object.entries(moAgg).sort((a,b)=>b[1]-a[1])[0];
   const chLabel=chs.length===S.data.summary.length?'all channels':`${chs.length} channel${chs.length!==1?'s':''}`;
   const yrLabel=lastTwo.length===2?`${lastTwo[0]} to ${lastTwo[1]}`:'the tracked period';
-  let para1=`Across ${chLabel}, the portfolio has generated <strong>${fmtN(tv)} total views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${vc.toLocaleString()} published videos.`;
-  if(vP!==null) para1+=` Views ${vP>=0?'grew':'declined'} <strong>${fmtP(vP)}</strong> from ${yrLabel}`;
-  if(rP!==null) para1+=`, while revenue ${rP>=0?'increased':'decreased'} <strong>${fmtP(rP)}</strong> over the same period.`;
-  let para2=`The portfolio averages a <strong>${actr.toFixed(1)}% click-through rate</strong> and <strong>${aret.toFixed(1)}% average retention</strong>, with viewers collectively watching <strong>${fmtN(twh)} hours</strong> of content.`;
-  if(ts>0) para2+=` The channels gained <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` — a ${fmtP(sP)} change year-over-year`:''}.`;
+  const now=new Date();
+  const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const isSingleMonth=S.from===S.to&&S.from!=='';
+  const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'all available data');
+  const meetingTitle=isSingleMonth?`${prevMonthName} <em>Review</em>`:`Executive <em>Summary</em>`;
+  let para1=`In ${isSingleMonth?periodLabel:'the selected period'}, across ${chLabel}, the portfolio generated <strong>${fmtN(tv)} views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${vc.toLocaleString()} published videos.`;
+  if(vP!==null) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> compared to ${yrLabel}`;
+  if(rP!==null) para1+=`, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong> over the same window.`;
+  let para2=`Audience quality remains ${actr>=5?'strong':'steady'} with a <strong>${actr.toFixed(1)}% click-through rate</strong> and <strong>${aret.toFixed(1)}% average retention</strong>. Viewers watched <strong>${fmtN(twh)} hours</strong> of content in total.`;
+  if(ts>0) para2+=` The channels added <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` — ${sP>=0?'a gain of':'down'} ${fmtP(Math.abs(sP))} year-over-year`:''}.`;
   let para3='';
   if(best){
     para3=`<strong>${best['Channel']}</strong> leads the portfolio with ${fmtN(parseFloat(best['Total Views'])||0)} views`;
-    if(bestPeriod) para3+=`, and the strongest month overall was <em>${bestPeriod[0]}</em> with ${fmtN(bestPeriod[1])} views across all channels.`;
+    if(bestPeriod) para3+=`. The strongest individual month on record was <em>${bestPeriod[0]}</em>, which drove ${fmtN(bestPeriod[1])} views across all channels.`;
     else para3+='.';
   }
-  const now=new Date();
   document.getElementById('mainContent').innerHTML=`
     <div class="page-top fade">
-      <div><div class="page-eyebrow">Meeting Mode</div><div class="page-title">Executive <em>Summary</em></div></div>
+      <div><div class="page-eyebrow">Meeting Mode · ${periodLabel}</div><div class="page-title">${meetingTitle}</div></div>
       ${filterBar()}
     </div>
     <div class="content fade">
@@ -1066,7 +1104,7 @@ function renderExecSummary(){
         <p>${para1}</p><br>
         <p>${para2}</p>
         ${para3?`<br><p>${para3}</p>`:''}
-        <div class="exec-meta">Generated ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${chLabel} · ${S.from||'all time'} → ${S.to||'present'}</div>
+        <div class="exec-meta">Prepared ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${chLabel} · ${periodLabel}</div>
       </div>
       <div class="stat-row">
         <div class="stat-cell"><div class="stat-eyebrow">Total views</div><div class="stat-num">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> YoY</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
