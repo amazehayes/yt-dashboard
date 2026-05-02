@@ -323,17 +323,9 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
     </div>
     <div class="nav-block">
       <div class="nav-label" style="padding:18px 24px 10px;font-size:10px;color:var(--ink3);letter-spacing:.18em;text-transform:uppercase">Meeting</div>
-      <div class="nav-item" onclick="setPage('summary')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h6"/><circle cx="13" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>
-        Exec Summary
-      </div>
-      <div class="nav-item" onclick="setPage('highlights')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><path d="M8 1l1.8 3.6L14 5.4l-3 2.9.7 4.1L8 10.4l-3.7 1.9.7-4.1-3-2.9 4.2-.8z" fill="currentColor" stroke="none"/></svg>
-        Highlight Reel
-      </div>
-      <div class="nav-item" onclick="setPage('deepdive')">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
-        Deep Dive
+      <div class="nav-item" onclick="setPage('meeting')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round"><rect x="1" y="2" width="14" height="11" rx="2"/><path d="M5 15h6M8 13v2"/></svg>
+        Meeting View
       </div>
     </div>
     <div class="ch-block" style="display:none">
@@ -461,7 +453,7 @@ function channelFilterHTML(){
 }
 function setPage(p){
   S.page=p;
-  document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',['overview','yoy','monthly','pervideo','videos','summary','highlights','deepdive'][i]===p));
+  document.querySelectorAll('.nav-item').forEach((el,i)=>el.classList.toggle('active',['overview','yoy','monthly','pervideo','videos','meeting'][i]===p));
   renderPage();
 }
 
@@ -565,7 +557,7 @@ function chartDefaults(yFmt,extra={}){
 function renderPage(){
   if(!S.data) return;
   destroyCharts();
-  ({overview:renderOverview,yoy:renderYoY,monthly:renderMonthly,pervideo:renderPerVideo,videos:renderVideos,summary:renderExecSummary,highlights:renderHighlights,deepdive:renderDeepDive}[S.page]||renderOverview)();
+  ({overview:renderOverview,yoy:renderYoY,monthly:renderMonthly,pervideo:renderPerVideo,videos:renderVideos,meeting:renderMeeting}[S.page]||renderOverview)();
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────
@@ -1041,88 +1033,139 @@ function renderVideos(){
     </div>`;
 }
 
-// ── EXEC SUMMARY ─────────────────────────────────────────────
-function renderExecSummary(){
+
+// ── MEETING VIEW (combined) ───────────────────────────────────
+function renderMeeting(){
   const chs=S.channels;
-  const mo=filterMo(S.data.monthly); // filtered by date range + channels
-  const allMo=S.data.monthly.filter(r=>chs.includes(r['Channel'])); // all time, selected channels
+  const mo=filterMo(S.data.monthly);
+  const allMo=S.data.monthly.filter(r=>chs.includes(r['Channel']));
+  const allVids=S.data.videos;
   const now=new Date();
   const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
   const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const isSingleMonth=S.from===S.to&&S.from!=='';
-  const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'all available data');
-  const meetingTitle=isSingleMonth?`${prevMonthName} <em>Review</em>`:`Executive <em>Summary</em>`;
+  const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
+  const meetingTitle=isSingleMonth?`${prevMonthName} <em>Review</em>`:`Meeting <em>View</em>`;
   const chLabel=chs.length===S.data.summary.length?'all channels':`${chs.length} channel${chs.length!==1?'s':''}`;
 
-  // Aggregate stats from FILTERED monthly rows (correct for the period)
+  // ── EXEC STATS ──────────────────────────────────────────────
   const tv=agg(mo,'Views'),twh=agg(mo,'Watch Hours');
   const tr=agg(mo,'Revenue ($)'),ts=agg(mo,'Subscribers');
   const actr=avg(mo,'Avg CTR (%)'),aret=avg(mo,'Avg Retention %');
   const vc=agg(mo,'Video Count');
 
-  // YoY: compare same month(s) last year vs this year
   let vP=null,rP=null,sP=null,yrLabel='';
   if(isSingleMonth&&S.from){
-    // Compare Apr 2026 vs Apr 2025
     const [fy,fm]=S.from.split('-').map(Number);
-    const prevYr=fy-1;
-    const sameMonthPrev=allMo.filter(r=>+r['Year']===prevYr&&+r['Month']===fm);
-    const sameMonthCurr=mo;
-    if(sameMonthPrev.length){
-      const pvViews=agg(sameMonthPrev,'Views');
-      const pvRev=agg(sameMonthPrev,'Revenue ($)');
-      const pvSubs=agg(sameMonthPrev,'Subscribers');
-      vP=pct(tv,pvViews);
-      rP=pct(tr,pvRev||1);
-      sP=pct(ts,pvSubs||1);
-      yrLabel=`${MO[fm-1]} ${prevYr}`;
+    const prev=allMo.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
+    if(prev.length){
+      vP=pct(tv,agg(prev,'Views'));
+      rP=pct(tr,agg(prev,'Revenue ($)')||1);
+      sP=pct(ts,agg(prev,'Subscribers')||1);
+      yrLabel=`${MO[fm-1]} ${fy-1}`;
     }
   } else {
-    // Multi-month: compare year totals
-    const years=getYears();
-    const lastTwo=years.slice(-2);
+    const years=getYears();const lastTwo=years.slice(-2);
     if(lastTwo.length===2){
       const byYC={};
-      allMo.forEach(r=>{
-        const key=`${r['Year']}|${r['Channel']}`;
-        if(!byYC[key])byYC[key]={views:0,rev:0,subs:0};
-        byYC[key].views+=parseFloat(r['Views'])||0;
-        byYC[key].rev+=parseFloat(r['Revenue ($)'])||0;
-        byYC[key].subs+=parseFloat(r['Subscribers'])||0;
-      });
-      const totYr=yr=>({
-        views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
-        rev:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
-        subs:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
-      });
-      const [tPrev,tCurr]=[totYr(lastTwo[0]),totYr(lastTwo[1])];
-      vP=pct(tCurr.views,tPrev.views);
-      rP=pct(tCurr.rev,tPrev.rev||1);
-      sP=pct(tCurr.subs,tPrev.subs||1);
-      yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
+      allMo.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC[k])byYC[k]={views:0,rev:0,subs:0};byYC[k].views+=parseFloat(r['Views'])||0;byYC[k].rev+=parseFloat(r['Revenue ($)'])||0;byYC[k].subs+=parseFloat(r['Subscribers'])||0;});
+      const t=yr=>({views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),rev:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),subs:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0)});
+      const [p,c]=[t(lastTwo[0]),t(lastTwo[1])];
+      vP=pct(c.views,p.views);rP=pct(c.rev,p.rev||1);sP=pct(c.subs,p.subs||1);yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
     }
   }
 
-  // Best channel by views in the filtered period
-  const byChViews={};
-  mo.forEach(r=>{if(!byChViews[r['Channel']])byChViews[r['Channel']]=0;byChViews[r['Channel']]+=parseFloat(r['Views'])||0;});
-  const bestCh=Object.entries(byChViews).sort((a,b)=>b[1]-a[1])[0];
-
-  // Best ALL-TIME month (across all data, not filtered)
-  const allMoAgg={};
-  allMo.forEach(r=>{if(!allMoAgg[r['Period']])allMoAgg[r['Period']]=0;allMoAgg[r['Period']]+=parseFloat(r['Views'])||0;});
+  // ── EXEC NARRATIVE ──────────────────────────────────────────
+  const byChV={};mo.forEach(r=>{if(!byChV[r['Channel']])byChV[r['Channel']]=0;byChV[r['Channel']]+=parseFloat(r['Views'])||0;});
+  const bestCh=Object.entries(byChV).sort((a,b)=>b[1]-a[1])[0];
+  const allMoAgg={};allMo.forEach(r=>{if(!allMoAgg[r['Period']])allMoAgg[r['Period']]=0;allMoAgg[r['Period']]+=parseFloat(r['Views'])||0;});
   const bestPeriod=Object.entries(allMoAgg).sort((a,b)=>b[1]-a[1])[0];
 
-  // Build paragraphs
   let para1=`In ${isSingleMonth?periodLabel:'the selected period'}, across ${chLabel}, the portfolio generated <strong>${fmtN(tv)} views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${Math.round(vc).toLocaleString()} videos.`;
-  if(vP!==null&&yrLabel) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> vs. ${yrLabel}, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong> over the same window.`;
-
+  if(vP!==null&&yrLabel) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> vs. ${yrLabel}, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong>.`;
   let para2=`Average CTR was <strong>${actr.toFixed(1)}%</strong> with <strong>${aret.toFixed(1)}% retention</strong>. Viewers watched <strong>${fmtN(twh)} hours</strong> of content.`;
   if(ts>0) para2+=` The channels added <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` (${sP>=0?'+':''}${fmtP(sP)} vs. same period last year)`:''}.`;
-
   let para3='';
   if(bestCh) para3+=`<strong>${bestCh[0]}</strong> led the portfolio this period with <strong>${fmtN(bestCh[1])} views</strong>.`;
-  if(bestPeriod&&!isSingleMonth) para3+=` The strongest month on record was <em>${bestPeriod[0]}</em> with ${fmtN(bestPeriod[1])} views across all channels.`;
+  if(bestPeriod&&!isSingleMonth) para3+=` The strongest month on record was <em>${bestPeriod[0]}</em> with ${fmtN(bestPeriod[1])} views.`;
+
+  // ── HIGHLIGHT REEL ──────────────────────────────────────────
+  const filtVids=filterVids(allVids);
+  const topByViews=[...filtVids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,5);
+  const topByRev=[...filtVids].sort((a,b)=>(parseFloat(b['Revenue ($)'])||0)-(parseFloat(a['Revenue ($)'])||0)).slice(0,5);
+  const topByCTR=[...filtVids].sort((a,b)=>(parseFloat(b['CTR (%)'])||0)-(parseFloat(a['CTR (%)'])||0)).slice(0,5);
+  const topByRet=[...filtVids].sort((a,b)=>(parseFloat(b['Avg Retention %'])||0)-(parseFloat(a['Avg Retention %'])||0)).slice(0,5);
+
+  const years=getYears();const lastTwo=years.slice(-2);
+  const byYC2={};
+  S.data.monthly.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC2[k])byYC2[k]={views:0,rev:0};byYC2[k].views+=parseFloat(r['Views'])||0;byYC2[k].rev+=parseFloat(r['Revenue ($)'])||0;});
+  const movers=lastTwo.length===2?chs.map(ch=>{const prev=(byYC2[`${lastTwo[0]}|${ch}`]||{}).views||0;const curr=(byYC2[`${lastTwo[1]}|${ch}`]||{}).views||0;return{ch,prev,curr,p:pct(curr,prev||1)};}).filter(r=>r.prev>0||r.curr>0).sort((a,b)=>b.p-a.p):[];
+  const bestMonths=chs.map(ch=>{const rows=mo.filter(r=>r['Channel']===ch);if(!rows.length)return null;const best=rows.sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0))[0];return{ch,period:best['Period'],views:parseFloat(best['Views'])||0};}).filter(Boolean);
+
+  function videoItem(r,i,valKey,valFmt){
+    const color=chColor(r['Channel']);
+    return`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title">${r['Title']||'Untitled'}</div><div class="hl-item-ch" style="color:${color}">${r['Channel']}</div></div><div class="hl-item-val">${valFmt(parseFloat(r[valKey])||0)}</div></div>`;
+  }
+
+  // ── DEEP DIVE per channel ────────────────────────────────────
+  function deepDiveSection(ch, chartIdx){
+    const color=chColor(ch);
+    const allMoRows=S.data.monthly.filter(r=>r['Channel']===ch);
+    const moRows=mo.filter(r=>r['Channel']===ch);
+    const vidRows=filterVids(allVids).filter(r=>r['Channel']===ch).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,10);
+    const ctv=agg(moRows,'Views'),ctwh=agg(moRows,'Watch Hours');
+    const ctr2=agg(moRows,'Revenue ($)'),cts=agg(moRows,'Subscribers');
+    const cactr=avg(moRows,'Avg CTR (%)'),caret=avg(moRows,'Avg Retention %');
+    const crpm=ctv>0?(ctr2/(ctv/1000)):0;
+
+    let cvP=null,crP=null,cyrLabel='';
+    if(isSingleMonth&&S.from){
+      const [fy,fm]=S.from.split('-').map(Number);
+      const prev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
+      if(prev.length){cvP=pct(ctv,agg(prev,'Views'));crP=pct(ctr2,agg(prev,'Revenue ($)')||1);cyrLabel=`${MO[fm-1]} ${fy-1}`;}
+    } else if(lastTwo.length===2){
+      const byYr={};allMoRows.forEach(r=>{if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0};byYr[r['Year']].views+=parseFloat(r['Views'])||0;byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;});
+      if(byYr[lastTwo[0]]&&byYr[lastTwo[1]]){cvP=pct(byYr[lastTwo[1]].views,byYr[lastTwo[0]].views);crP=pct(byYr[lastTwo[1]].rev,byYr[lastTwo[0]].rev||1);cyrLabel=`${lastTwo[0]}`;}
+    }
+
+    const allPeriods=sortPeriods([...new Set(allMoRows.map(r=>r['Period']))]);
+    const vId=`ddV${chartIdx}`,cId=`ddC${chartIdx}`,rId=`ddR${chartIdx}`;
+
+    return {
+      html:`
+      <div style="margin-bottom:40px;padding-bottom:40px;border-bottom:1px solid var(--rule)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <span style="width:12px;height:12px;border-radius:3px;background:${color};flex-shrink:0;display:inline-block"></span>
+          <span style="font-family:var(--serif);font-size:28px;line-height:1">${ch}</span>
+        </div>
+        <div class="stat-row" style="border-left:4px solid ${color};margin-bottom:20px">
+          <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(ctv)}</div>${cvP!==null?`<div class="stat-sub"><span class="${cvP>=0?'up-tag':'dn-tag'}">${fmtP(cvP)}</span> vs ${cyrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+          <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(ctr2)}</div>${crP!==null?`<div class="stat-sub"><span class="${crP>=0?'up-tag':'dn-tag'}">${fmtP(crP)}</span> vs ${cyrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+          <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(ctwh)}</div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(cts)}</div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${cactr.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${caret.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Est. RPM</div><div class="stat-num">$${crpm.toFixed(2)}</div><div class="stat-sub">per 1K views</div></div>
+        </div>
+        <div class="chart-card wide" style="margin-bottom:16px">
+          <div class="card-top"><div class="card-label">Monthly views — full history</div></div>
+          <div style="position:relative;height:240px"><canvas id="${vId}" role="img" aria-label="${ch} views history">${ch} views</canvas></div>
+        </div>
+        ${vidRows.length?`
+        <div class="section-head"><div class="section-label">Top videos — ${periodLabel}</div><div class="section-line"></div></div>
+        <div class="data-table">
+          <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px 65px 70px">
+            <span>Title</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span>
+          </div>
+          ${vidRows.map(r=>{const ret=parseFloat(r['Avg Retention %'])||0;const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px 65px 70px"><div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div><div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div><div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div></div>`;}).join('')}
+        </div>`:`<div style="font-size:13px;color:var(--ink3);padding:12px 0">No videos published in this period.</div>`}
+      </div>`,
+      chartData:{vId,cId:null,rId:null,allPeriods,allMoRows,color}
+    };
+  }
+
+  // ── BUILD PAGE ──────────────────────────────────────────────
+  const deepDiveSections=chs.map((ch,i)=>deepDiveSection(ch,i));
 
   document.getElementById('mainContent').innerHTML=`
     <div class="page-top fade">
@@ -1131,12 +1174,16 @@ function renderExecSummary(){
     </div>
     <div class="content fade">
       ${channelFilterHTML()}
+
+      <!-- EXEC SUMMARY -->
       <div class="exec-summary">
         <p>${para1}</p><br>
         <p>${para2}</p>
         ${para3?`<br><p>${para3}</p>`:''}
         <div class="exec-meta">Prepared ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${chLabel} · ${periodLabel}</div>
       </div>
+
+      <!-- PORTFOLIO STATS -->
       <div class="stat-row">
         <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
@@ -1145,271 +1192,65 @@ function renderExecSummary(){
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
       </div>
+
+      <!-- CHANNEL SNAPSHOT -->
       <div class="section-head"><div class="section-label">Channel snapshot — ${periodLabel}</div><div class="section-line"></div></div>
-      <div class="data-table">
+      <div class="data-table" style="margin-bottom:36px">
         <div class="dt-head" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
           <span>Channel</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span><span>Videos</span>
         </div>
         ${chs.map(ch=>{
-          const rows=mo.filter(r=>r['Channel']===ch);
-          if(!rows.length) return '';
+          const rows=mo.filter(r=>r['Channel']===ch);if(!rows.length)return'';
           const color=chColor(ch);
           const v=agg(rows,'Views'),wh=agg(rows,'Watch Hours'),rev=agg(rows,'Revenue ($)');
           const ctr=avg(rows,'Avg CTR (%)'),ret=avg(rows,'Avg Retention %'),vc2=agg(rows,'Video Count');
           return`<div class="dt-row" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
             <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
-            <div class="mono-cell">${fmtN(v)}</div>
-            <div class="mono-cell">${fmtN(wh)}</div>
-            <div class="mono-cell">${fmtD(rev)}</div>
+            <div class="mono-cell">${fmtN(v)}</div><div class="mono-cell">${fmtN(wh)}</div><div class="mono-cell">${fmtD(rev)}</div>
             <div class="mono-cell">${ctr.toFixed(1)}%</div>
             <div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
             <div class="mono-cell">${Math.round(vc2)}</div>
           </div>`;
         }).join('')}
       </div>
-    </div>`;
-}
 
-// ── HIGHLIGHT REEL ────────────────────────────────────────────
-function renderHighlights(){
-  const chs=S.channels;
-  const vids=filterVids(S.data.videos);
-  const mo=filterMo(S.data.monthly);
-  const years=getYears();
-  const lastTwo=years.slice(-2);
-  const topByViews=[...vids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,5);
-  const topByRev=[...vids].sort((a,b)=>(parseFloat(b['Revenue ($)'])||0)-(parseFloat(a['Revenue ($)'])||0)).slice(0,5);
-  const topByCTR=[...vids].sort((a,b)=>(parseFloat(b['CTR (%)'])||0)-(parseFloat(a['CTR (%)'])||0)).slice(0,5);
-  const topByRet=[...vids].sort((a,b)=>(parseFloat(b['Avg Retention %'])||0)-(parseFloat(a['Avg Retention %'])||0)).slice(0,5);
-  const byYC={};
-  S.data.monthly.forEach(r=>{
-    const key=`${r['Year']}|${r['Channel']}`;
-    if(!byYC[key])byYC[key]={views:0,rev:0};
-    byYC[key].views+=parseFloat(r['Views'])||0;
-    byYC[key].rev+=parseFloat(r['Revenue ($)'])||0;
-  });
-  const movers=lastTwo.length===2?chs.map(ch=>{
-    const prev=(byYC[`${lastTwo[0]}|${ch}`]||{}).views||0;
-    const curr=(byYC[`${lastTwo[1]}|${ch}`]||{}).views||0;
-    return{ch,prev,curr,p:pct(curr,prev||1)};
-  }).filter(r=>r.prev>0||r.curr>0).sort((a,b)=>b.p-a.p):[];
-  const bestMonths=chs.map(ch=>{
-    const rows=mo.filter(r=>r['Channel']===ch);
-    if(!rows.length) return null;
-    const best=rows.sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0))[0];
-    return{ch,period:best['Period'],views:parseFloat(best['Views'])||0};
-  }).filter(Boolean);
-  function videoItem(r,i,valKey,valFmt){
-    const color=chColor(r['Channel']);
-    return`<div class="hl-item">
-      <div class="hl-rank">${i+1}</div>
-      <div class="hl-item-body">
-        <div class="hl-item-title">${r['Title']||'Untitled'}</div>
-        <div class="hl-item-ch" style="color:${color}">${r['Channel']}</div>
-      </div>
-      <div class="hl-item-val">${valFmt(parseFloat(r[valKey])||0)}</div>
-    </div>`;
-  }
-  document.getElementById('mainContent').innerHTML=`
-    <div class="page-top fade">
-      <div><div class="page-eyebrow">Meeting Mode</div><div class="page-title">Highlight <em>Reel</em></div></div>
-      ${filterBar()}
-    </div>
-    <div class="content fade">
-      ${channelFilterHTML()}
+      <!-- HIGHLIGHT REEL -->
+      <div class="section-head"><div class="section-label">Highlight reel — ${periodLabel}</div><div class="section-line"></div></div>
       ${movers.length?`
-      <div class="section-head"><div class="section-label">Biggest movers ${lastTwo.join('→')}</div><div class="section-line"></div></div>
-      <div class="data-table" style="margin-bottom:28px">
-        <div class="dt-head" style="grid-template-columns:2fr 110px 110px 90px">
-          <span>Channel</span><span>${lastTwo[0]} views</span><span>${lastTwo[1]} views</span><span>Change</span>
-        </div>
+      <div class="section-head" style="margin-top:0;margin-bottom:12px"><div class="section-label" style="color:var(--ink2)">Biggest movers ${lastTwo.join('→')}</div><div class="section-line"></div></div>
+      <div class="data-table" style="margin-bottom:20px">
+        <div class="dt-head" style="grid-template-columns:2fr 110px 110px 90px"><span>Channel</span><span>${lastTwo[0]} views</span><span>${lastTwo[1]||'Current'} views</span><span>Change</span></div>
         ${movers.map(r=>`<div class="dt-row" style="grid-template-columns:2fr 110px 110px 90px">
           <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${chColor(r.ch)};flex-shrink:0;display:inline-block"></span><span class="dt-name">${r.ch}</span></div>
-          <div class="mono-cell">${fmtN(r.prev)}</div>
-          <div class="mono-cell">${fmtN(r.curr)}</div>
+          <div class="mono-cell">${fmtN(r.prev)}</div><div class="mono-cell">${fmtN(r.curr)}</div>
           <div class="${r.p>=0?'delta-up':'delta-dn'}" style="font-size:14px;font-weight:700">${fmtP(r.p)}</div>
         </div>`).join('')}
       </div>`:''}
-      <div class="hl-grid">
-        <div class="hl-card">
-          <div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top by views</div><div class="hl-card-sub">Most watched videos</div></div></div>
-          ${topByViews.map((r,i)=>videoItem(r,i,'Views',v=>fmtN(v))).join('')}
-        </div>
-        <div class="hl-card">
-          <div class="hl-card-head"><div class="hl-icon" style="background:#fef3c7">💰</div><div><div class="hl-card-title">Top by revenue</div><div class="hl-card-sub">Highest earning videos</div></div></div>
-          ${topByRev.map((r,i)=>videoItem(r,i,'Revenue ($)',v=>fmtD(v))).join('')}
-        </div>
-        <div class="hl-card">
-          <div class="hl-card-head"><div class="hl-icon" style="background:#ede9fe">🎯</div><div><div class="hl-card-title">Top by CTR</div><div class="hl-card-sub">Best click-through rate</div></div></div>
-          ${topByCTR.map((r,i)=>videoItem(r,i,'CTR (%)',v=>v.toFixed(1)+'%')).join('')}
-        </div>
-        <div class="hl-card">
-          <div class="hl-card-head"><div class="hl-icon" style="background:#fce7f3">🔒</div><div><div class="hl-card-title">Top by retention</div><div class="hl-card-sub">Best audience hold</div></div></div>
-          ${topByRet.map((r,i)=>videoItem(r,i,'Avg Retention %',v=>v.toFixed(1)+'%')).join('')}
-        </div>
-        ${bestMonths.length?`<div class="hl-card hl-wide">
-          <div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>
-          ${bestMonths.map((r,i)=>`<div class="hl-item">
-            <div class="hl-rank">${i+1}</div>
-            <div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div>
-            <div class="hl-item-val">${fmtN(r.views)} views</div>
-          </div>`).join('')}
-        </div>`:''}
+      <div class="hl-grid" style="margin-bottom:36px">
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top by views</div><div class="hl-card-sub">Most watched</div></div></div>${topByViews.map((r,i)=>videoItem(r,i,'Views',v=>fmtN(v))).join('')}</div>
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fef3c7">💰</div><div><div class="hl-card-title">Top by revenue</div><div class="hl-card-sub">Highest earning</div></div></div>${topByRev.map((r,i)=>videoItem(r,i,'Revenue ($)',v=>fmtD(v))).join('')}</div>
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#ede9fe">🎯</div><div><div class="hl-card-title">Top by CTR</div><div class="hl-card-sub">Best click-through</div></div></div>${topByCTR.map((r,i)=>videoItem(r,i,'CTR (%)',v=>v.toFixed(1)+'%')).join('')}</div>
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fce7f3">🔒</div><div><div class="hl-card-title">Top by retention</div><div class="hl-card-sub">Best audience hold</div></div></div>${topByRet.map((r,i)=>videoItem(r,i,'Avg Retention %',v=>v.toFixed(1)+'%')).join('')}
+        ${bestMonths.length?`</div><div class="hl-card hl-wide"><div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>${bestMonths.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div><div class="hl-item-val">${fmtN(r.views)} views</div></div>`).join('')}</div>`:'</div>'}
       </div>
+
+      <!-- DEEP DIVE PER CHANNEL -->
+      <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
+      ${deepDiveSections.map(s=>s.html).join('')}
     </div>`;
-}
 
-// ── DEEP DIVE ─────────────────────────────────────────────────
-function renderDeepDive(){
-  const allChs=S.data.summary.map(r=>r['Channel']).filter(Boolean);
-  if(!S.deepdiveCh) S.deepdiveCh=allChs[0];
-  const ch=S.deepdiveCh;
-  const color=chColor(ch);
-
-  // All monthly rows for this channel (for charts — full history)
-  const allMoRows=S.data.monthly.filter(r=>r['Channel']===ch);
-  // Filtered monthly rows (for stats — respects date filter)
-  const moRows=filterMo(S.data.monthly).filter(r=>r['Channel']===ch);
-  // Filtered video rows
-  const vidRows=filterVids(S.data.videos).filter(r=>r['Channel']===ch)
-    .sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,20);
-
-  // Stats from FILTERED monthly data
-  const tv=agg(moRows,'Views'), twh=agg(moRows,'Watch Hours');
-  const tr=agg(moRows,'Revenue ($)'), ts=agg(moRows,'Subscribers');
-  const actr=avg(moRows,'Avg CTR (%)'), aret=avg(moRows,'Avg Retention %');
-  const vc=agg(moRows,'Video Count');
-  const rpm=tv>0?(tr/(tv/1000)):0;
-
-  // Period label
-  const now=new Date();
-  const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  const isSingleMonth=S.from===S.to&&S.from!=='';
-  const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
-
-  // YoY: same month last year vs this month
-  let vP=null, rP=null, yrLabel='';
-  if(isSingleMonth&&S.from){
-    const [fy,fm]=S.from.split('-').map(Number);
-    const sameMonthPrev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
-    if(sameMonthPrev.length){
-      const pvViews=agg(sameMonthPrev,'Views');
-      const pvRev=agg(sameMonthPrev,'Revenue ($)');
-      vP=pct(tv,pvViews); rP=pct(tr,pvRev||1);
-      yrLabel=`${MO[fm-1]} ${fy-1}`;
-    }
-  } else {
-    // Multi-month: compare by year
-    const byYr={};
-    allMoRows.forEach(r=>{
-      if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0};
-      byYr[r['Year']].views+=parseFloat(r['Views'])||0;
-      byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;
+  // Render deep dive charts
+  deepDiveSections.forEach(s=>{
+    const {vId,allPeriods,allMoRows,color}=s.chartData;
+    _charts[vId]=new Chart(document.getElementById(vId),{
+      type:'line',
+      data:{labels:allPeriods,datasets:[{
+        data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),
+        borderColor:color,backgroundColor:color+'18',fill:true,tension:0,pointRadius:2,pointHoverRadius:5,borderWidth:2.5,spanGaps:true
+      }]},
+      options:chartDefaults(v=>fmtN(v))
     });
-    const yrKeys=Object.keys(byYr).map(Number).sort();
-    const lastTwo=yrKeys.slice(-2);
-    if(lastTwo.length===2){
-      vP=pct(byYr[lastTwo[1]].views,byYr[lastTwo[0]].views);
-      rP=pct(byYr[lastTwo[1]].rev,byYr[lastTwo[0]].rev||1);
-      yrLabel=`${lastTwo[0]}`;
-    }
-  }
-
-  // All periods for chart x-axis (full history, not filtered)
-  const allPeriods=sortPeriods([...new Set(allMoRows.map(r=>r['Period']))]);
-
-  // YoY table — group all history by year
-  const byYr={};
-  allMoRows.forEach(r=>{
-    if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0,subs:0,imp:0};
-    byYr[r['Year']].views+=parseFloat(r['Views'])||0;
-    byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;
-    byYr[r['Year']].subs+=parseFloat(r['Subscribers'])||0;
-    byYr[r['Year']].imp+=parseFloat(r['Impressions'])||0;
   });
-  const yrKeys=Object.keys(byYr).map(Number).sort();
-
-  document.getElementById('mainContent').innerHTML=`
-    <div class="page-top fade">
-      <div><div class="page-eyebrow">Meeting Mode · ${periodLabel}</div><div class="page-title">Deep <em>Dive</em></div></div>
-      ${filterBar()}
-    </div>
-    <div class="content fade">
-      <div class="dd-pick">
-        ${allChs.map(c=>`<button class="dd-pick-btn${c===ch?' on':''}" style="${c===ch?`background:${chColor(c)};border-color:${chColor(c)}`:`border-color:${chColor(c)}44;color:${chColor(c)}`}" onclick="S.deepdiveCh='${c.replace(/'/g,"\\'")}';renderPage()">
-          <span style="width:8px;height:8px;border-radius:50%;background:${c===ch?'rgba(255,255,255,0.8)':chColor(c)};display:inline-block;flex-shrink:0"></span>${c}
-        </button>`).join('')}
-      </div>
-
-      <div class="stat-row" style="border-left:4px solid ${color}">
-        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Est. RPM</div><div class="stat-num">$${rpm.toFixed(2)}</div><div class="stat-sub">per 1K views</div></div>
-      </div>
-
-      <div class="section-head"><div class="section-label">Full history — views & engagement</div><div class="section-line"></div></div>
-      <div class="charts-grid" style="margin-bottom:28px">
-        <div class="chart-card wide"><div class="card-top"><div class="card-label">Monthly views — all time</div></div><div style="position:relative;height:280px"><canvas id="ddViews" role="img" aria-label="Deep dive views">Views</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">CTR % — all time</div></div><div style="position:relative;height:220px"><canvas id="ddCTR" role="img" aria-label="Deep dive CTR">CTR</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">Avg retention % — all time</div></div><div style="position:relative;height:220px"><canvas id="ddRet" role="img" aria-label="Deep dive retention">Retention</canvas></div></div>
-      </div>
-
-      ${yrKeys.length>1?`
-      <div class="section-head"><div class="section-label">Year-over-year</div><div class="section-line"></div></div>
-      <div class="data-table" style="margin-bottom:28px">
-        <div class="dt-head" style="grid-template-columns:80px 110px 100px 100px 110px">
-          <span>Year</span><span>Views</span><span>Revenue</span><span>Subs</span><span>Impressions</span>
-        </div>
-        ${yrKeys.map((yr,i)=>{
-          const d=byYr[yr];const prev=byYr[yrKeys[i-1]];
-          return`<div class="dt-row" style="grid-template-columns:80px 110px 100px 100px 110px">
-            <div class="mono-cell" style="font-weight:700;color:${color}">${yr}</div>
-            <div><div class="mono-cell">${fmtN(d.views)}</div>${prev?`<div class="${pct(d.views,prev.views)>=0?'delta-up':'delta-dn'}">${fmtP(pct(d.views,prev.views))}</div>`:''}</div>
-            <div><div class="mono-cell">${fmtD(d.rev)}</div>${prev&&prev.rev?`<div class="${pct(d.rev,prev.rev)>=0?'delta-up':'delta-dn'}">${fmtP(pct(d.rev,prev.rev))}</div>`:''}</div>
-            <div><div class="mono-cell">${fmtN(d.subs)}</div>${prev?`<div class="${pct(d.subs,prev.subs)>=0?'delta-up':'delta-dn'}">${fmtP(pct(d.subs,prev.subs))}</div>`:''}</div>
-            <div class="mono-cell">${fmtN(d.imp)}</div>
-          </div>`;
-        }).join('')}
-      </div>`:''}
-
-      <div class="section-head"><div class="section-label">Top videos — ${periodLabel}</div><div class="section-line"></div></div>
-      <div class="data-table">
-        <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px 65px 70px">
-          <span>Title</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span>
-        </div>
-        ${vidRows.length?vidRows.map(r=>{
-          const ret=parseFloat(r['Avg Retention %'])||0;
-          const pub=r['Published At']?r['Published At'].substring(0,12):'';
-          return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px 65px 70px">
-            <div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div>
-            <div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div>
-            <div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div>
-            <div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div>
-            <div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
-            <div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
-          </div>`;
-        }).join(''):`<div class="dt-row"><div style="color:var(--ink3);font-size:13px">No videos published in this period.</div></div>`}
-      </div>
-    </div>`;
-
-  // Charts use full all-time history so you can see context
-  _charts.ddv=new Chart(document.getElementById('ddViews'),{type:'line',data:{labels:allPeriods,datasets:[{
-    data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),
-    borderColor:color,backgroundColor:color+'18',fill:true,tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
-  }]},options:chartDefaults(v=>fmtN(v))});
-  _charts.ddc=new Chart(document.getElementById('ddCTR'),{type:'line',data:{labels:allPeriods,datasets:[{
-    data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),
-    borderColor:color,backgroundColor:'transparent',tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
-  }]},options:chartDefaults(v=>v.toFixed(1)+'%')});
-  _charts.ddr=new Chart(document.getElementById('ddRet'),{type:'line',data:{labels:allPeriods,datasets:[{
-    data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Avg Retention %'])||null:null;}),
-    borderColor:color,backgroundColor:'transparent',tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
-  }]},options:chartDefaults(v=>v.toFixed(1)+'%')});
 }
 </script>
 </body>
