@@ -697,11 +697,11 @@ function renderMeeting(){
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
       </div>
 
-      <!-- CHANNEL SNAPSHOT with YoY -->
+      <!-- CHANNEL SNAPSHOT with YoY inline -->
       <div class="section-head"><div class="section-label">Channel snapshot — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table" style="margin-bottom:36px">
-        <div class="dt-head" style="grid-template-columns:2fr 110px 60px 110px 60px 80px 70px 60px">
-          <span>Channel</span><span>Views</span><span>vs LY</span><span>Revenue</span><span>vs LY</span><span>Watch hrs</span><span>CTR</span><span>Videos</span>
+        <div class="dt-head" style="grid-template-columns:2fr 100px 110px 80px 70px 60px">
+          <span>Channel</span><span>Views</span><span>Revenue</span><span>Watch hrs</span><span>CTR</span><span>Videos</span>
         </div>
         ${chs.map(ch=>{
           const rows=mo.filter(r=>r['Channel']===ch);if(!rows.length)return'';
@@ -709,12 +709,12 @@ function renderMeeting(){
           const v=agg(rows,'Views'),wh=agg(rows,'Watch Hours'),rev=agg(rows,'Revenue ($)');
           const ctr=avg(rows,'Avg CTR (%)'),ret=avg(rows,'Avg Retention %'),vc2=agg(rows,'Video Count');
           const yoy=chYoY(ch);
-          return`<div class="dt-row" style="grid-template-columns:2fr 110px 60px 110px 60px 80px 70px 60px">
+          const vDelta=yoy.vP!==null?`<div style="font-size:11px;font-family:var(--mono);margin-top:2px;color:${yoy.vP>=0?'var(--green)':'var(--red)'}">${fmtP(yoy.vP)}</div>`:'';
+          const rDelta=yoy.rP!==null?`<div style="font-size:11px;font-family:var(--mono);margin-top:2px;color:${yoy.rP>=0?'var(--green)':'var(--red)'}">${fmtP(yoy.rP)}</div>`:'';
+          return`<div class="dt-row" style="grid-template-columns:2fr 100px 110px 80px 70px 60px">
             <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
-            <div class="mono-cell">${fmtN(v)}</div>
-            <div class="${yoy.vP!==null?(yoy.vP>=0?'delta-up':'delta-dn'):'mono-cell'}" style="font-size:11px">${yoy.vP!==null?fmtP(yoy.vP):'—'}</div>
-            <div class="mono-cell">${fmtD(rev)}</div>
-            <div class="${yoy.rP!==null?(yoy.rP>=0?'delta-up':'delta-dn'):'mono-cell'}" style="font-size:11px">${yoy.rP!==null?fmtP(yoy.rP):'—'}</div>
+            <div><div class="mono-cell">${fmtN(v)}</div>${vDelta}</div>
+            <div><div class="mono-cell">${fmtD(rev)}</div>${rDelta}</div>
             <div class="mono-cell">${fmtN(wh)}</div>
             <div class="mono-cell">${ctr.toFixed(1)}%</div>
             <div class="mono-cell">${Math.round(vc2)}</div>
