@@ -382,19 +382,14 @@ function buildSidebar(){
 
 function toggleChannel(ch){
   if(ch==='ALL'){
-    // if all selected, deselect all; else select all
-    const allChs=S.data.summary.map(r=>r['Channel']).filter(Boolean);
-    S.channels = S.channels.length===allChs.length ? [] : [...allChs];
-  } else {
-    if(S.channels.includes(ch)){
-      S.channels=S.channels.filter(c=>c!==ch);
-    } else {
-      S.channels=[...S.channels,ch];
-    }
-  }
-  if(S.channels.length===0){
-    // never allow 0 — reset to all
     S.channels=S.data.summary.map(r=>r['Channel']).filter(Boolean);
+  } else {
+    // If already the sole selected channel, go back to all
+    if(S.channels.length===1&&S.channels[0]===ch){
+      S.channels=S.data.summary.map(r=>r['Channel']).filter(Boolean);
+    } else {
+      S.channels=[ch];
+    }
   }
   renderPage();
 }
@@ -657,6 +652,25 @@ function renderMeeting(){
   // ── BUILD PAGE ──────────────────────────────────────────────
   const deepDiveSections=chs.map((ch,i)=>deepDiveSection(ch,i));
 
+  // Pre-compute per-channel YoY for snapshot table
+  function chYoY(ch){
+    const allMoRows=S.data.monthly.filter(r=>r['Channel']===ch);
+    if(isSingleMonth&&S.from){
+      const [fy,fm]=S.from.split('-').map(Number);
+      const prev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
+      if(!prev.length) return {vP:null,rP:null,label:`${MO[fm-1]} ${fy-1}`};
+      const rows=mo.filter(r=>r['Channel']===ch);
+      return {vP:pct(agg(rows,'Views'),agg(prev,'Views')),rP:pct(agg(rows,'Revenue ($)'),agg(prev,'Revenue ($)')||1),label:`${MO[fm-1]} ${fy-1}`};
+    } else if(lastTwo.length===2){
+      const byYr={};allMoRows.forEach(r=>{if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0};byYr[r['Year']].views+=parseFloat(r['Views'])||0;byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;});
+      if(byYr[lastTwo[0]]&&byYr[lastTwo[1]]){
+        const rows=mo.filter(r=>r['Channel']===ch);
+        return {vP:pct(agg(rows,'Views'),byYr[lastTwo[0]].views),rP:pct(agg(rows,'Revenue ($)'),byYr[lastTwo[0]].rev||1),label:`${lastTwo[0]}`};
+      }
+    }
+    return {vP:null,rP:null,label:''};
+  }
+
   document.getElementById('mainContent').innerHTML=`
     <div class="page-top fade">
       <div><div class="page-eyebrow">Meeting Mode · ${periodLabel}</div><div class="page-title">${meetingTitle}</div></div>
@@ -683,50 +697,44 @@ function renderMeeting(){
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
       </div>
 
-      <!-- CHANNEL SNAPSHOT -->
+      <!-- CHANNEL SNAPSHOT with YoY -->
       <div class="section-head"><div class="section-label">Channel snapshot — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table" style="margin-bottom:36px">
-        <div class="dt-head" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
-          <span>Channel</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span><span>Videos</span>
+        <div class="dt-head" style="grid-template-columns:2fr 110px 60px 110px 60px 80px 70px 60px">
+          <span>Channel</span><span>Views</span><span>vs LY</span><span>Revenue</span><span>vs LY</span><span>Watch hrs</span><span>CTR</span><span>Videos</span>
         </div>
         ${chs.map(ch=>{
           const rows=mo.filter(r=>r['Channel']===ch);if(!rows.length)return'';
           const color=chColor(ch);
           const v=agg(rows,'Views'),wh=agg(rows,'Watch Hours'),rev=agg(rows,'Revenue ($)');
           const ctr=avg(rows,'Avg CTR (%)'),ret=avg(rows,'Avg Retention %'),vc2=agg(rows,'Video Count');
-          return`<div class="dt-row" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
+          const yoy=chYoY(ch);
+          return`<div class="dt-row" style="grid-template-columns:2fr 110px 60px 110px 60px 80px 70px 60px">
             <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
-            <div class="mono-cell">${fmtN(v)}</div><div class="mono-cell">${fmtN(wh)}</div><div class="mono-cell">${fmtD(rev)}</div>
+            <div class="mono-cell">${fmtN(v)}</div>
+            <div class="${yoy.vP!==null?(yoy.vP>=0?'delta-up':'delta-dn'):'mono-cell'}" style="font-size:11px">${yoy.vP!==null?fmtP(yoy.vP):'—'}</div>
+            <div class="mono-cell">${fmtD(rev)}</div>
+            <div class="${yoy.rP!==null?(yoy.rP>=0?'delta-up':'delta-dn'):'mono-cell'}" style="font-size:11px">${yoy.rP!==null?fmtP(yoy.rP):'—'}</div>
+            <div class="mono-cell">${fmtN(wh)}</div>
             <div class="mono-cell">${ctr.toFixed(1)}%</div>
-            <div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
             <div class="mono-cell">${Math.round(vc2)}</div>
           </div>`;
         }).join('')}
       </div>
 
-      <!-- HIGHLIGHT REEL -->
-      <div class="section-head"><div class="section-label">Highlight reel — ${periodLabel}</div><div class="section-line"></div></div>
-      ${movers.length?`
-      <div class="section-head" style="margin-top:0;margin-bottom:12px"><div class="section-label" style="color:var(--ink2)">Biggest movers ${lastTwo.join('→')}</div><div class="section-line"></div></div>
-      <div class="data-table" style="margin-bottom:20px">
-        <div class="dt-head" style="grid-template-columns:2fr 110px 110px 90px"><span>Channel</span><span>${lastTwo[0]} views</span><span>${lastTwo[1]||'Current'} views</span><span>Change</span></div>
-        ${movers.map(r=>`<div class="dt-row" style="grid-template-columns:2fr 110px 110px 90px">
-          <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${chColor(r.ch)};flex-shrink:0;display:inline-block"></span><span class="dt-name">${r.ch}</span></div>
-          <div class="mono-cell">${fmtN(r.prev)}</div><div class="mono-cell">${fmtN(r.curr)}</div>
-          <div class="${r.p>=0?'delta-up':'delta-dn'}" style="font-size:14px;font-weight:700">${fmtP(r.p)}</div>
-        </div>`).join('')}
-      </div>`:''}
+      <!-- DEEP DIVE PER CHANNEL -->
+      <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
+      ${deepDiveSections.map(s=>s.html).join('')}
+
+      <!-- HIGHLIGHT REEL (bottom) -->
+      <div class="section-head" style="margin-top:8px"><div class="section-label">Highlight reel — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="hl-grid" style="margin-bottom:36px">
         <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top by views</div><div class="hl-card-sub">Most watched</div></div></div>${topByViews.map((r,i)=>videoItem(r,i,'Views',v=>fmtN(v))).join('')}</div>
         <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fef3c7">💰</div><div><div class="hl-card-title">Top by revenue</div><div class="hl-card-sub">Highest earning</div></div></div>${topByRev.map((r,i)=>videoItem(r,i,'Revenue ($)',v=>fmtD(v))).join('')}</div>
         <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#ede9fe">🎯</div><div><div class="hl-card-title">Top by CTR</div><div class="hl-card-sub">Best click-through</div></div></div>${topByCTR.map((r,i)=>videoItem(r,i,'CTR (%)',v=>v.toFixed(1)+'%')).join('')}</div>
-        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fce7f3">🔒</div><div><div class="hl-card-title">Top by retention</div><div class="hl-card-sub">Best audience hold</div></div></div>${topByRet.map((r,i)=>videoItem(r,i,'Avg Retention %',v=>v.toFixed(1)+'%')).join('')}
-        ${bestMonths.length?`</div><div class="hl-card hl-wide"><div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>${bestMonths.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div><div class="hl-item-val">${fmtN(r.views)} views</div></div>`).join('')}</div>`:'</div>'}
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fce7f3">🔒</div><div><div class="hl-card-title">Top by retention</div><div class="hl-card-sub">Best audience hold</div></div></div>${topByRet.map((r,i)=>videoItem(r,i,'Avg Retention %',v=>v.toFixed(1)+'%')).join('')}</div>
+        ${bestMonths.length?`<div class="hl-card hl-wide"><div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>${bestMonths.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div><div class="hl-item-val">${fmtN(r.views)} views</div></div>`).join('')}</div>`:''}
       </div>
-
-      <!-- DEEP DIVE PER CHANNEL -->
-      <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
-      ${deepDiveSections.map(s=>s.html).join('')}
     </div>`;
 
   // Render deep dive charts
