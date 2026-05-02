@@ -1145,21 +1145,25 @@ function renderExecSummary(){
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
       </div>
-      <div class="section-head"><div class="section-label">Channel snapshot</div><div class="section-line"></div></div>
+      <div class="section-head"><div class="section-label">Channel snapshot — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table">
         <div class="dt-head" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
           <span>Channel</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span><span>Videos</span>
         </div>
-        ${sum.sort((a,b)=>(parseFloat(b['Total Views'])||0)-(parseFloat(a['Total Views'])||0)).map(r=>{
-          const color=chColor(r['Channel']);const ret=parseFloat(r['Avg Retention %'])||0;
+        ${chs.map(ch=>{
+          const rows=mo.filter(r=>r['Channel']===ch);
+          if(!rows.length) return '';
+          const color=chColor(ch);
+          const v=agg(rows,'Views'),wh=agg(rows,'Watch Hours'),rev=agg(rows,'Revenue ($)');
+          const ctr=avg(rows,'Avg CTR (%)'),ret=avg(rows,'Avg Retention %'),vc2=agg(rows,'Video Count');
           return`<div class="dt-row" style="grid-template-columns:2fr 90px 90px 80px 70px 70px 60px">
-            <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${r['Channel']}</span></div>
-            <div class="mono-cell">${fmtN(parseFloat(r['Total Views'])||0)}</div>
-            <div class="mono-cell">${fmtN(parseFloat(r['Total Watch Hours'])||0)}</div>
-            <div class="mono-cell">${fmtD(parseFloat(r['Total Revenue ($)'])||0)}</div>
-            <div class="mono-cell">${(parseFloat(r['Avg CTR (%)'])||0).toFixed(1)}%</div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
+            <div class="mono-cell">${fmtN(v)}</div>
+            <div class="mono-cell">${fmtN(wh)}</div>
+            <div class="mono-cell">${fmtD(rev)}</div>
+            <div class="mono-cell">${ctr.toFixed(1)}%</div>
             <div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
-            <div class="mono-cell">${r['Video Count']||'—'}</div>
+            <div class="mono-cell">${Math.round(vc2)}</div>
           </div>`;
         }).join('')}
       </div>
@@ -1261,34 +1265,75 @@ function renderDeepDive(){
   if(!S.deepdiveCh) S.deepdiveCh=allChs[0];
   const ch=S.deepdiveCh;
   const color=chColor(ch);
-  const sumRow=S.data.summary.find(r=>r['Channel']===ch)||{};
-  const moRows=S.data.monthly.filter(r=>r['Channel']===ch);
-  const vidRows=S.data.videos.filter(r=>r['Channel']===ch).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,20);
-  const periods=sortPeriods([...new Set(moRows.map(r=>r['Period']))]);
-  const tv=parseFloat(sumRow['Total Views'])||0;
-  const twh=parseFloat(sumRow['Total Watch Hours'])||0;
-  const tr=parseFloat(sumRow['Total Revenue ($)'])||0;
-  const ts=parseFloat(sumRow['Total Subscribers'])||0;
-  const actr=parseFloat(sumRow['Avg CTR (%)'])||0;
-  const aret=parseFloat(sumRow['Avg Retention %'])||0;
-  const vc=parseFloat(sumRow['Video Count'])||0;
+
+  // All monthly rows for this channel (for charts — full history)
+  const allMoRows=S.data.monthly.filter(r=>r['Channel']===ch);
+  // Filtered monthly rows (for stats — respects date filter)
+  const moRows=filterMo(S.data.monthly).filter(r=>r['Channel']===ch);
+  // Filtered video rows
+  const vidRows=filterVids(S.data.videos).filter(r=>r['Channel']===ch)
+    .sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,20);
+
+  // Stats from FILTERED monthly data
+  const tv=agg(moRows,'Views'), twh=agg(moRows,'Watch Hours');
+  const tr=agg(moRows,'Revenue ($)'), ts=agg(moRows,'Subscribers');
+  const actr=avg(moRows,'Avg CTR (%)'), aret=avg(moRows,'Avg Retention %');
+  const vc=agg(moRows,'Video Count');
   const rpm=tv>0?(tr/(tv/1000)):0;
+
+  // Period label
+  const now=new Date();
+  const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const isSingleMonth=S.from===S.to&&S.from!=='';
+  const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
+
+  // YoY: same month last year vs this month
+  let vP=null, rP=null, yrLabel='';
+  if(isSingleMonth&&S.from){
+    const [fy,fm]=S.from.split('-').map(Number);
+    const sameMonthPrev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
+    if(sameMonthPrev.length){
+      const pvViews=agg(sameMonthPrev,'Views');
+      const pvRev=agg(sameMonthPrev,'Revenue ($)');
+      vP=pct(tv,pvViews); rP=pct(tr,pvRev||1);
+      yrLabel=`${MO[fm-1]} ${fy-1}`;
+    }
+  } else {
+    // Multi-month: compare by year
+    const byYr={};
+    allMoRows.forEach(r=>{
+      if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0};
+      byYr[r['Year']].views+=parseFloat(r['Views'])||0;
+      byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;
+    });
+    const yrKeys=Object.keys(byYr).map(Number).sort();
+    const lastTwo=yrKeys.slice(-2);
+    if(lastTwo.length===2){
+      vP=pct(byYr[lastTwo[1]].views,byYr[lastTwo[0]].views);
+      rP=pct(byYr[lastTwo[1]].rev,byYr[lastTwo[0]].rev||1);
+      yrLabel=`${lastTwo[0]}`;
+    }
+  }
+
+  // All periods for chart x-axis (full history, not filtered)
+  const allPeriods=sortPeriods([...new Set(allMoRows.map(r=>r['Period']))]);
+
+  // YoY table — group all history by year
   const byYr={};
-  moRows.forEach(r=>{
-    const yr=r['Year'];
-    if(!byYr[yr])byYr[yr]={views:0,rev:0,subs:0,imp:0};
-    byYr[yr].views+=parseFloat(r['Views'])||0;
-    byYr[yr].rev+=parseFloat(r['Revenue ($)'])||0;
-    byYr[yr].subs+=parseFloat(r['Subscribers'])||0;
-    byYr[yr].imp+=parseFloat(r['Impressions'])||0;
+  allMoRows.forEach(r=>{
+    if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0,subs:0,imp:0};
+    byYr[r['Year']].views+=parseFloat(r['Views'])||0;
+    byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;
+    byYr[r['Year']].subs+=parseFloat(r['Subscribers'])||0;
+    byYr[r['Year']].imp+=parseFloat(r['Impressions'])||0;
   });
   const yrKeys=Object.keys(byYr).map(Number).sort();
-  const lastTwo=yrKeys.slice(-2);
-  const vP=lastTwo.length===2?pct(byYr[lastTwo[1]].views,byYr[lastTwo[0]].views):null;
-  const rP=lastTwo.length===2?pct(byYr[lastTwo[1]].rev,byYr[lastTwo[0]].rev):null;
+
   document.getElementById('mainContent').innerHTML=`
     <div class="page-top fade">
-      <div><div class="page-eyebrow">Meeting Mode</div><div class="page-title">Deep <em>Dive</em></div></div>
+      <div><div class="page-eyebrow">Meeting Mode · ${periodLabel}</div><div class="page-title">Deep <em>Dive</em></div></div>
+      ${filterBar()}
     </div>
     <div class="content fade">
       <div class="dd-pick">
@@ -1296,21 +1341,24 @@ function renderDeepDive(){
           <span style="width:8px;height:8px;border-radius:50%;background:${c===ch?'rgba(255,255,255,0.8)':chColor(c)};display:inline-block;flex-shrink:0"></span>${c}
         </button>`).join('')}
       </div>
+
       <div class="stat-row" style="border-left:4px solid ${color}">
-        <div class="stat-cell"><div class="stat-eyebrow">Total views</div><div class="stat-num" style="color:${color}">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> YoY</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> YoY</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Est. RPM</div><div class="stat-num">$${rpm.toFixed(2)}</div><div class="stat-sub">per 1K views</div></div>
       </div>
-      <div class="section-head"><div class="section-label">Views & engagement over time</div><div class="section-line"></div></div>
+
+      <div class="section-head"><div class="section-label">Full history — views & engagement</div><div class="section-line"></div></div>
       <div class="charts-grid" style="margin-bottom:28px">
-        <div class="chart-card wide"><div class="card-top"><div class="card-label">Monthly views</div></div><div style="position:relative;height:280px"><canvas id="ddViews" role="img" aria-label="Deep dive views">Views</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">CTR %</div></div><div style="position:relative;height:220px"><canvas id="ddCTR" role="img" aria-label="Deep dive CTR">CTR</canvas></div></div>
-        <div class="chart-card"><div class="card-top"><div class="card-label">Avg retention %</div></div><div style="position:relative;height:220px"><canvas id="ddRet" role="img" aria-label="Deep dive retention">Retention</canvas></div></div>
+        <div class="chart-card wide"><div class="card-top"><div class="card-label">Monthly views — all time</div></div><div style="position:relative;height:280px"><canvas id="ddViews" role="img" aria-label="Deep dive views">Views</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">CTR % — all time</div></div><div style="position:relative;height:220px"><canvas id="ddCTR" role="img" aria-label="Deep dive CTR">CTR</canvas></div></div>
+        <div class="chart-card"><div class="card-top"><div class="card-label">Avg retention % — all time</div></div><div style="position:relative;height:220px"><canvas id="ddRet" role="img" aria-label="Deep dive retention">Retention</canvas></div></div>
       </div>
+
       ${yrKeys.length>1?`
       <div class="section-head"><div class="section-label">Year-over-year</div><div class="section-line"></div></div>
       <div class="data-table" style="margin-bottom:28px">
@@ -1328,12 +1376,13 @@ function renderDeepDive(){
           </div>`;
         }).join('')}
       </div>`:''}
-      <div class="section-head"><div class="section-label">Top 20 videos</div><div class="section-line"></div></div>
+
+      <div class="section-head"><div class="section-label">Top videos — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table">
         <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px 65px 70px">
           <span>Title</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span>
         </div>
-        ${vidRows.map(r=>{
+        ${vidRows.length?vidRows.map(r=>{
           const ret=parseFloat(r['Avg Retention %'])||0;
           const pub=r['Published At']?r['Published At'].substring(0,12):'';
           return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px 65px 70px">
@@ -1344,12 +1393,23 @@ function renderDeepDive(){
             <div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div>
             <div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div>
           </div>`;
-        }).join('')}
+        }).join(''):`<div class="dt-row"><div style="color:var(--ink3);font-size:13px">No videos published in this period.</div></div>`}
       </div>
     </div>`;
-  _charts.ddv=new Chart(document.getElementById('ddViews'),{type:'line',data:{labels:periods,datasets:[{data:periods.map(p=>{const r=moRows.find(r=>r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),borderColor:color,backgroundColor:color+'18',fill:true,tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true}]},options:chartDefaults(v=>fmtN(v))});
-  _charts.ddc=new Chart(document.getElementById('ddCTR'),{type:'line',data:{labels:periods,datasets:[{data:periods.map(p=>{const r=moRows.find(r=>r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),borderColor:color,backgroundColor:'transparent',tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true}]},options:chartDefaults(v=>v.toFixed(1)+'%')});
-  _charts.ddr=new Chart(document.getElementById('ddRet'),{type:'line',data:{labels:periods,datasets:[{data:periods.map(p=>{const r=moRows.find(r=>r['Period']===p);return r?parseFloat(r['Avg Retention %'])||null:null;}),borderColor:color,backgroundColor:'transparent',tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true}]},options:chartDefaults(v=>v.toFixed(1)+'%')});
+
+  // Charts use full all-time history so you can see context
+  _charts.ddv=new Chart(document.getElementById('ddViews'),{type:'line',data:{labels:allPeriods,datasets:[{
+    data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),
+    borderColor:color,backgroundColor:color+'18',fill:true,tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+  }]},options:chartDefaults(v=>fmtN(v))});
+  _charts.ddc=new Chart(document.getElementById('ddCTR'),{type:'line',data:{labels:allPeriods,datasets:[{
+    data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Avg CTR (%)'])||null:null;}),
+    borderColor:color,backgroundColor:'transparent',tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+  }]},options:chartDefaults(v=>v.toFixed(1)+'%')});
+  _charts.ddr=new Chart(document.getElementById('ddRet'),{type:'line',data:{labels:allPeriods,datasets:[{
+    data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Avg Retention %'])||null:null;}),
+    borderColor:color,backgroundColor:'transparent',tension:0,pointRadius:3,pointHoverRadius:6,borderWidth:2.5,spanGaps:true
+  }]},options:chartDefaults(v=>v.toFixed(1)+'%')});
 }
 </script>
 </body>
