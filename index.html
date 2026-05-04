@@ -776,7 +776,11 @@ function renderMeeting(){
         <div style="display:grid;grid-template-columns:2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
           ${['Channel','Videos','Views','Revenue','Watch hrs','Subs','CTR','Retention','','Videos','Views','Revenue','Watch hrs','Subs','CTR','Retention'].map((h,i)=>`<span style="font-family:var(--mono);font-size:9px;color:${i===0||i===8?'transparent':i<8?'var(--ink2)':'var(--ink3)'};text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
         </div>
-        ${chs.map(ch=>{
+        ${[...chs].sort((a,b)=>{
+          const aRows=mo.filter(r=>r['Channel']===a);
+          const bRows=mo.filter(r=>r['Channel']===b);
+          return (bRows.length?agg(bRows,'Views'):0)-(aRows.length?agg(aRows,'Views'):0);
+        }).map(ch=>{
           const rows=mo.filter(r=>r['Channel']===ch);
           const color=chColor(ch);
           const v=rows.length?agg(rows,'Views'):null;
