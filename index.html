@@ -589,7 +589,7 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     if(aVal===-Infinity&&bVal===-Infinity) return 0;
     if(aVal===-Infinity) return 1;
     if(bVal===-Infinity) return -1;
-    return S.snapDir*(bVal-aVal);
+    return S.snapDir*(aVal-bVal);
   });
 
   const rows=sortedChs.map(ch=>{
