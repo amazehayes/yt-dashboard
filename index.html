@@ -585,7 +585,11 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
         default:    return agg(rows,'Views');
       }
     };
-    return S.snapDir*(val(bR)-val(aR));
+    const aVal=val(aR), bVal=val(bR);
+    if(aVal===-Infinity&&bVal===-Infinity) return 0;
+    if(aVal===-Infinity) return 1;
+    if(bVal===-Infinity) return -1;
+    return S.snapDir*(bVal-aVal);
   });
 
   const rows=sortedChs.map(ch=>{
