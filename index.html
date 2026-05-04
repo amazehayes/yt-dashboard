@@ -551,7 +551,119 @@ function renderPage(){
   renderMeeting();
 }
 
-// ── MEETING VIEW (combined) ───────────────────────────────────
+function buildSnapshotTable(chs, mo, lyPeriodLabel){
+  const cols='2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px';
+  const hdStyle=(active,ly)=>`font-family:var(--mono);font-size:9px;color:${ly?'var(--ink3)':'var(--ink2)'};text-transform:uppercase;letter-spacing:.12em`;
+  const headers=[
+    {label:'Channel',key:null},{label:'Videos',key:'vc'},{label:'Views',key:'v'},
+    {label:'Revenue',key:'rev'},{label:'Watch hrs',key:'wh'},{label:'Subs',key:'subs'},
+    {label:'CTR',key:'ctr'},{label:'Retention',key:'ret'},
+    {label:'',key:null},
+    {label:'Videos',key:null,ly:true},{label:'Views',key:null,ly:true},{label:'Revenue',key:null,ly:true},
+    {label:'Watch hrs',key:null,ly:true},{label:'Subs',key:null,ly:true},{label:'CTR',key:null,ly:true},{label:'Retention',key:null,ly:true},
+  ];
+
+  // Get periodLabel from S state
+  const now=new Date();
+  const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const isSM=S.from===S.to&&S.from!=='';
+  const pLabel=isSM?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
+
+  const sortedChs=[...chs].sort((a,b)=>{
+    const aR=mo.filter(r=>r['Channel']===a), bR=mo.filter(r=>r['Channel']===b);
+    const val=(rows)=>{
+      if(!rows.length) return -Infinity;
+      switch(S.snapSort){
+        case 'vc':  return agg(rows,'Video Count');
+        case 'v':   return agg(rows,'Views');
+        case 'rev': return agg(rows,'Revenue ($)');
+        case 'wh':  return agg(rows,'Watch Hours');
+        case 'subs':return agg(rows,'Subscribers');
+        case 'ctr': return avg(rows,'Avg CTR (%)');
+        case 'ret': return avg(rows,'Avg Retention %');
+        default:    return agg(rows,'Views');
+      }
+    };
+    return S.snapDir*(val(bR)-val(aR));
+  });
+
+  const rows=sortedChs.map(ch=>{
+    const r=mo.filter(r=>r['Channel']===ch);
+    const color=chColor(ch);
+    const v=r.length?agg(r,'Views'):null, wh=r.length?agg(r,'Watch Hours'):null;
+    const rev=r.length?agg(r,'Revenue ($)'):null, subs=r.length?agg(r,'Subscribers'):null;
+    const ctr=r.length?avg(r,'Avg CTR (%)'):null, ret=r.length?avg(r,'Avg Retention %'):null;
+    const vc2=r.length?agg(r,'Video Count'):null;
+    const lyR=getLYRows(ch);
+    const ly=(col,rows)=>rows?col(rows):null;
+    const lyV=ly(r=>agg(r,'Views'),lyR), lyRev=ly(r=>agg(r,'Revenue ($)'),lyR);
+    const lyWH=ly(r=>agg(r,'Watch Hours'),lyR), lySubs=ly(r=>agg(r,'Subscribers'),lyR);
+    const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
+    const lyVC=ly(r=>agg(r,'Video Count'),lyR);
+    // YoY deltas
+    const allMoRows=S.data.monthly.filter(row=>row['Channel']===ch);
+    const years=getYears();const lastTwo=years.slice(-2);
+    let prev=[];
+    if(isSM&&S.from){const[fy,fm]=S.from.split('-').map(Number);prev=allMoRows.filter(row=>+row['Year']===(fy-1)&&+row['Month']===fm);}
+    else if(lastTwo.length===2) prev=allMoRows.filter(row=>+row['Year']===lastTwo[0]);
+    const safe=(a,b)=>b?pct(a,b):null;
+    const yoy={
+      vP:  safe(v,   prev.length?agg(prev,'Views'):null),
+      rP:  safe(rev, prev.length?agg(prev,'Revenue ($)'):null),
+      whP: safe(wh,  prev.length?agg(prev,'Watch Hours'):null),
+      sP:  safe(subs,prev.length?agg(prev,'Subscribers'):null),
+      ctrP:safe(ctr, prev.length?avg(prev,'Avg CTR (%)'):null),
+      retP:safe(ret, prev.length?avg(prev,'Avg Retention %'):null),
+      vcP: safe(vc2, prev.length?agg(prev,'Video Count'):null),
+    };
+    const cell=(val,fmt,delta)=>`<div>${val!==null?`<div class="mono-cell">${fmt(val)}</div>${deltaSpanS(delta)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}</div>`;
+    const lyCell=(val,fmt)=>`<div class="mono-cell" style="color:var(--ink3)">${val!==null?fmt(val):'—'}</div>`;
+    return `<div class="dt-row" style="grid-template-columns:${cols}">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
+      ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
+      ${cell(v,fmtN,yoy.vP)}
+      ${cell(rev,fmtD,yoy.rP)}
+      ${cell(wh,fmtN,yoy.whP)}
+      ${cell(subs,fmtN,yoy.sP)}
+      ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
+      ${cell(ret,v=>v.toFixed(1)+'%',yoy.retP)}
+      <div style="background:var(--rule);width:1px;height:100%;margin:0 auto"></div>
+      ${lyCell(lyVC,v=>Math.round(v).toString())}
+      ${lyCell(lyV,fmtN)}
+      ${lyCell(lyRev,fmtD)}
+      ${lyCell(lyWH,fmtN)}
+      ${lyCell(lySubs,fmtN)}
+      ${lyCell(lyCTR,v=>v.toFixed(1)+'%')}
+      ${lyCell(lyRet,v=>v.toFixed(1)+'%')}
+    </div>`;
+  }).join('');
+
+  function deltaSpanS(p){ if(p===null)return''; return`<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:${p>=0?'var(--green)':'var(--red)'}">${fmtP(p)}</div>`; }
+
+  return `
+    <div class="section-head"><div class="section-label">Channel snapshot — ${pLabel}</div><div class="section-line"></div></div>
+    <div class="data-table" style="margin-bottom:36px">
+      <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
+        <div></div>
+        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
+        <div></div>
+        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
+        ${headers.map((h,i)=>{
+          if(!h.label) return '<span></span>';
+          if(!h.key)   return `<span style="font-family:var(--mono);font-size:9px;color:${h.ly?'var(--ink3)':'var(--ink2)'};text-transform:uppercase;letter-spacing:.12em">${h.label}</span>`;
+          const active=S.snapSort===h.key;
+          const arrow=active?(S.snapDir===-1?'↓':'↑'):'↕';
+          return `<span class="sort-hd${active?' active':''}" style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em" onclick="setSnapSort('${h.key}')">${h.label} <span class="sort-arrow">${arrow}</span></span>`;
+        }).join('')}
+      </div>
+      ${rows}
+    </div>`;
+}
+
+// ── MEETING VIEW ──────────────────────────────────────────────
 function renderMeeting(){
   const chs=S.channels;
   const mo=filterMo(S.data.monthly);
@@ -779,11 +891,13 @@ function renderMeeting(){
     lyPeriodLabel=`${S.from.replace(String(fy),String(fy-1))} — ${S.to.replace(String(parseInt(S.to)),String(parseInt(S.to)-1))}`;
   }
 
+  // Compute snapshot table HTML separately to avoid nested template literal issues
+  const snapshotHTML = chs.length <= 1 ? '' : buildSnapshotTable(chs, mo, lyPeriodLabel);
+
+  // ── RENDER PAGE ──────────────────────────────────────────────
   document.getElementById('mainContent').innerHTML=`
     <div class="content fade">
       ${channelFilterHTML()}
-
-      <!-- PORTFOLIO STATS -->
       <div class="stat-row">
         <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div>${stag(vcP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${stag(vP)}</div>
@@ -793,107 +907,9 @@ function renderMeeting(){
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(ctrP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(retP)}</div>
       </div>
-
-      <!-- CHANNEL SNAPSHOT grouped headers -->
-      <div class="section-head"><div class="section-label">Channel snapshot — ${periodLabel}</div><div class="section-line"></div></div>
-      <div class="data-table" style="margin-bottom:36px">
-        <div style="display:grid;grid-template-columns:2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
-          <div></div>
-          <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${periodLabel}</div>
-          <div></div>
-          <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
-        </div>
-        <div style="display:grid;grid-template-columns:2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
-          ${[
-            {label:'Channel', key:null, ly:false},
-            {label:'Videos',  key:'vc',   ly:false},
-            {label:'Views',   key:'v',    ly:false},
-            {label:'Revenue', key:'rev',  ly:false},
-            {label:'Watch hrs',key:'wh',  ly:false},
-            {label:'Subs',    key:'subs', ly:false},
-            {label:'CTR',     key:'ctr',  ly:false},
-            {label:'Retention',key:'ret', ly:false},
-            {label:'',        key:null,   ly:false},
-            {label:'Videos',  key:null,   ly:true},
-            {label:'Views',   key:null,   ly:true},
-            {label:'Revenue', key:null,   ly:true},
-            {label:'Watch hrs',key:null,  ly:true},
-            {label:'Subs',    key:null,   ly:true},
-            {label:'CTR',     key:null,   ly:true},
-            {label:'Retention',key:null,  ly:true},
-          ].map((h,i)=>{
-            if(!h.label) return `<span></span>`;
-            if(!h.key) return `<span style="font-family:var(--mono);font-size:9px;color:${i===0?'var(--ink2)':'var(--ink3)'};text-transform:uppercase;letter-spacing:.12em">${h.label}</span>`;
-            const active=S.snapSort===h.key;
-            const arrow=active?(S.snapDir===-1?'↓':'↑'):'↕';
-            return `<span class="sort-hd${active?' active':''}" style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em" onclick="setSnapSort('${h.key}')">${h.label} <span class="sort-arrow">${arrow}</span></span>`;
-          }).join('')}
-        </div>
-        ${[...chs].sort((a,b)=>{
-          const aRows=mo.filter(r=>r['Channel']===a);
-          const bRows=mo.filter(r=>r['Channel']===b);
-          const val=(rows)=>{
-            if(!rows.length) return -Infinity;
-            switch(S.snapSort){
-              case 'vc':  return agg(rows,'Video Count');
-              case 'v':   return agg(rows,'Views');
-              case 'rev': return agg(rows,'Revenue ($)');
-              case 'wh':  return agg(rows,'Watch Hours');
-              case 'subs':return agg(rows,'Subscribers');
-              case 'ctr': return avg(rows,'Avg CTR (%)');
-              case 'ret': return avg(rows,'Avg Retention %');
-              default:    return agg(rows,'Views');
-            }
-          };
-          return S.snapDir*(val(bRows)-val(aRows));
-        }).map(ch=>{
-          const rows=mo.filter(r=>r['Channel']===ch);
-          const color=chColor(ch);
-          const v=rows.length?agg(rows,'Views'):null;
-          const wh=rows.length?agg(rows,'Watch Hours'):null;
-          const rev=rows.length?agg(rows,'Revenue ($)'):null;
-          const subs=rows.length?agg(rows,'Subscribers'):null;
-          const ctr=rows.length?avg(rows,'Avg CTR (%)'):null;
-          const ret=rows.length?avg(rows,'Avg Retention %'):null;
-          const vc2=rows.length?agg(rows,'Video Count'):null;
-          const yoy=chYoY(ch);
-          const lyRows=getLYRows(ch);
-          const lyV=lyRows?agg(lyRows,'Views'):null;
-          const lyRev=lyRows?agg(lyRows,'Revenue ($)'):null;
-          const lyWH=lyRows?agg(lyRows,'Watch Hours'):null;
-          const lySubs=lyRows?agg(lyRows,'Subscribers'):null;
-          const lyCTR=lyRows?avg(lyRows,'Avg CTR (%)'):null;
-          const lyRet=lyRows?avg(lyRows,'Avg Retention %'):null;
-          const lyVC=lyRows?agg(lyRows,'Video Count'):null;
-          const cols='2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px';
-          const cell=(val,fmt,delta)=>`<div>${val!==null?`<div class="mono-cell">${fmt(val)}</div>${deltaSpan(delta)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}</div>`;
-          const lyCell=(val,fmt)=>`<div class="mono-cell" style="color:var(--ink3)">${val!==null?fmt(val):'—'}</div>`;
-          return`<div class="dt-row" style="grid-template-columns:${cols}">
-            <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
-            ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
-            ${cell(v,fmtN,yoy.vP)}
-            ${cell(rev,fmtD,yoy.rP)}
-            ${cell(wh,fmtN,yoy.whP)}
-            ${cell(subs,fmtN,yoy.sP)}
-            ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
-            ${cell(ret,v=>v.toFixed(1)+'%',yoy.retP)}
-            <div style="background:var(--rule);width:1px;height:100%;margin:0 auto"></div>
-            ${lyCell(lyVC,v=>Math.round(v).toString())}
-            ${lyCell(lyV,fmtN)}
-            ${lyCell(lyRev,fmtD)}
-            ${lyCell(lyWH,fmtN)}
-            ${lyCell(lySubs,fmtN)}
-            ${lyCell(lyCTR,v=>v.toFixed(1)+'%')}
-            ${lyCell(lyRet,v=>v.toFixed(1)+'%')}
-          </div>`;
-        }).join('')}
-      </div>
-
-      <!-- DEEP DIVE PER CHANNEL -->
+      ${snapshotHTML}
       <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
       ${deepDiveSections.map(s=>s.html).join('')}
-
-      <!-- HIGHLIGHT REEL (bottom) -->
       <div class="section-head" style="margin-top:8px"><div class="section-label">Highlight reel — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="hl-grid" style="margin-bottom:36px">
         <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top by views</div><div class="hl-card-sub">Most watched</div></div></div>${topByViews.map((r,i)=>videoItem(r,i,'Views',v=>fmtN(v))).join('')}</div>
