@@ -232,6 +232,10 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .state-box p { font-size:13px; color:var(--ink3); max-width:340px; line-height:1.6; }
 .spinner { width:28px; height:28px; border:2px solid var(--rule); border-top-color:var(--ink); border-radius:50%; animation:spin 0.7s linear infinite; margin-bottom:16px; }
 @keyframes spin { to { transform:rotate(360deg); } }
+.sort-hd { cursor:pointer; user-select:none; display:inline-flex; align-items:center; gap:3px; }
+.sort-hd:hover { color:var(--ink) !important; }
+.sort-arrow { font-size:8px; opacity:0.5; }
+.sort-hd.active .sort-arrow { opacity:1; color:var(--ink2); }
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 .fade { animation: fadeIn 0.3s ease forwards; }
 </style>
@@ -279,7 +283,7 @@ const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a'];
 
-let S = { channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null };
+let S = { channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null, snapSort:'views', snapDir:-1 };
 let CH = {};
 
 (function init() {
@@ -359,6 +363,12 @@ function setSyncing(v){
 }
 function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box fade"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>';}
 function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
+
+function setSnapSort(key){
+  if(S.snapSort===key) S.snapDir*=-1;
+  else { S.snapSort=key; S.snapDir=-1; }
+  renderPage();
+}
 
 function buildSidebar(){
   // sidebar channel list hidden — channels now filtered per page
@@ -794,12 +804,48 @@ function renderMeeting(){
           <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
         </div>
         <div style="display:grid;grid-template-columns:2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
-          ${['Channel','Videos','Views','Revenue','Watch hrs','Subs','CTR','Retention','','Videos','Views','Revenue','Watch hrs','Subs','CTR','Retention'].map((h,i)=>`<span style="font-family:var(--mono);font-size:9px;color:${i===0||i===8?'transparent':i<8?'var(--ink2)':'var(--ink3)'};text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
+          ${[
+            {label:'Channel', key:null, ly:false},
+            {label:'Videos',  key:'vc',   ly:false},
+            {label:'Views',   key:'v',    ly:false},
+            {label:'Revenue', key:'rev',  ly:false},
+            {label:'Watch hrs',key:'wh',  ly:false},
+            {label:'Subs',    key:'subs', ly:false},
+            {label:'CTR',     key:'ctr',  ly:false},
+            {label:'Retention',key:'ret', ly:false},
+            {label:'',        key:null,   ly:false},
+            {label:'Videos',  key:null,   ly:true},
+            {label:'Views',   key:null,   ly:true},
+            {label:'Revenue', key:null,   ly:true},
+            {label:'Watch hrs',key:null,  ly:true},
+            {label:'Subs',    key:null,   ly:true},
+            {label:'CTR',     key:null,   ly:true},
+            {label:'Retention',key:null,  ly:true},
+          ].map((h,i)=>{
+            if(!h.label) return `<span></span>`;
+            if(!h.key) return `<span style="font-family:var(--mono);font-size:9px;color:${i===0?'var(--ink2)':'var(--ink3)'};text-transform:uppercase;letter-spacing:.12em">${h.label}</span>`;
+            const active=S.snapSort===h.key;
+            const arrow=active?(S.snapDir===-1?'↓':'↑'):'↕';
+            return `<span class="sort-hd${active?' active':''}" style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em" onclick="setSnapSort('${h.key}')">${h.label} <span class="sort-arrow">${arrow}</span></span>`;
+          }).join('')}
         </div>
         ${[...chs].sort((a,b)=>{
           const aRows=mo.filter(r=>r['Channel']===a);
           const bRows=mo.filter(r=>r['Channel']===b);
-          return (bRows.length?agg(bRows,'Views'):0)-(aRows.length?agg(aRows,'Views'):0);
+          const val=(rows)=>{
+            if(!rows.length) return -Infinity;
+            switch(S.snapSort){
+              case 'vc':  return agg(rows,'Video Count');
+              case 'v':   return agg(rows,'Views');
+              case 'rev': return agg(rows,'Revenue ($)');
+              case 'wh':  return agg(rows,'Watch Hours');
+              case 'subs':return agg(rows,'Subscribers');
+              case 'ctr': return avg(rows,'Avg CTR (%)');
+              case 'ret': return avg(rows,'Avg Retention %');
+              default:    return agg(rows,'Views');
+            }
+          };
+          return S.snapDir*(val(bRows)-val(aRows));
         }).map(ch=>{
           const rows=mo.filter(r=>r['Channel']===ch);
           const color=chColor(ch);
