@@ -456,6 +456,7 @@ function getLYRows(ch){
 }
 function isSingleMonth(){ return S.from===S.to&&S.from!==''; }
 
+function isLastMonth(){
   const now=new Date();
   const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
   const ym=`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
