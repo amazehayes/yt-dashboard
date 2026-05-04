@@ -277,7 +277,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
 const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance' };
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const PAL = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#65a30d','#db2777'];
+const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a'];
 
 let S = { channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null };
 let CH = {};
@@ -307,8 +307,24 @@ async function loadData(){
       fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos)
     ]);
     S.data={summary,monthly,pervideo,videos};
-    // Build channel color map
-    summary.forEach((r,i)=>{CH[r['Channel']]=PAL[i%PAL.length];});
+    // Explicit channel color + order map
+    const CH_ORDER = [
+      'Dynasty League Football',
+      '4for4 Fantasy Football',
+      '4for4 Live!',
+      'Bleacher Nation',
+      'Deep Dive Podcast',
+      'Betsperts Golf',
+    ];
+    CH_ORDER.forEach((name, i) => { CH[name] = PAL[i]; });
+    // Fallback for any channel not in the list
+    summary.forEach((r, i) => { if (!CH[r['Channel']]) CH[r['Channel']] = PAL[i % PAL.length]; });
+    // Sort summary rows to match desired order
+    S.data.summary = [...summary].sort((a, b) => {
+      const ai = CH_ORDER.indexOf(a['Channel']);
+      const bi = CH_ORDER.indexOf(b['Channel']);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
     // Default: all channels selected
     if(S.channels.length===0) S.channels=summary.map(r=>r['Channel']).filter(Boolean);
     // Default date range to previous month
