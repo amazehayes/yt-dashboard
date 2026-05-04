@@ -558,26 +558,43 @@ function renderMeeting(){
   const actr=avg(mo,'Avg CTR (%)'),aret=avg(mo,'Avg Retention %');
   const vc=agg(mo,'Video Count');
 
-  let vP=null,rP=null,sP=null,yrLabel='';
+  let vP=null,rP=null,sP=null,whP=null,ctrP=null,retP=null,vcP=null,yrLabel='';
   if(isSingleMonth&&S.from){
     const [fy,fm]=S.from.split('-').map(Number);
     const prev=allMo.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
     if(prev.length){
-      vP=pct(tv,agg(prev,'Views'));
-      rP=pct(tr,agg(prev,'Revenue ($)')||1);
-      sP=pct(ts,agg(prev,'Subscribers')||1);
+      const safe=(a,b)=>b?pct(a,b):null;
+      vP=  safe(tv,  agg(prev,'Views'));
+      rP=  safe(tr,  agg(prev,'Revenue ($)'));
+      whP= safe(twh, agg(prev,'Watch Hours'));
+      sP=  safe(ts,  agg(prev,'Subscribers'));
+      ctrP=safe(actr,avg(prev,'Avg CTR (%)'));
+      retP=safe(aret,avg(prev,'Avg Retention %'));
+      vcP= safe(vc,  agg(prev,'Video Count'));
       yrLabel=`${MO[fm-1]} ${fy-1}`;
     }
   } else {
     const years=getYears();const lastTwo=years.slice(-2);
     if(lastTwo.length===2){
       const byYC={};
-      allMo.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC[k])byYC[k]={views:0,rev:0,subs:0};byYC[k].views+=parseFloat(r['Views'])||0;byYC[k].rev+=parseFloat(r['Revenue ($)'])||0;byYC[k].subs+=parseFloat(r['Subscribers'])||0;});
-      const t=yr=>({views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),rev:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),subs:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0)});
+      allMo.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC[k])byYC[k]={views:0,rev:0,subs:0,wh:0,ctrSum:0,retSum:0,vc:0,count:0};byYC[k].views+=parseFloat(r['Views'])||0;byYC[k].rev+=parseFloat(r['Revenue ($)'])||0;byYC[k].subs+=parseFloat(r['Subscribers'])||0;byYC[k].wh+=parseFloat(r['Watch Hours'])||0;byYC[k].ctrSum+=parseFloat(r['Avg CTR (%)'])||0;byYC[k].retSum+=parseFloat(r['Avg Retention %'])||0;byYC[k].vc+=parseFloat(r['Video Count'])||0;byYC[k].count++;});
+      const t=yr=>({
+        views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
+        rev:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
+        subs: chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
+        wh:   chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).wh||0),0),
+        ctr:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).ctrSum||0),0)/Math.max(chs.length,1),
+        ret:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).retSum||0),0)/Math.max(chs.length,1),
+        vc:   chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).vc||0),0),
+      });
       const [p,c]=[t(lastTwo[0]),t(lastTwo[1])];
-      vP=pct(c.views,p.views);rP=pct(c.rev,p.rev||1);sP=pct(c.subs,p.subs||1);yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
+      const safe=(a,b)=>b?pct(a,b):null;
+      vP=safe(c.views,p.views); rP=safe(c.rev,p.rev); sP=safe(c.subs,p.subs);
+      whP=safe(c.wh,p.wh); ctrP=safe(c.ctr,p.ctr); retP=safe(c.ret,p.ret); vcP=safe(c.vc,p.vc);
+      yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
     }
   }
+  const stag=(p)=>p!==null?`<div class="stat-sub"><span class="${p>=0?'up-tag':'dn-tag'}">${fmtP(p)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>';
 
   // ── EXEC NARRATIVE ──────────────────────────────────────────
   const byChV={};mo.forEach(r=>{if(!byChV[r['Channel']])byChV[r['Channel']]=0;byChV[r['Channel']]+=parseFloat(r['Views'])||0;});
@@ -755,13 +772,13 @@ function renderMeeting(){
 
       <!-- PORTFOLIO STATS -->
       <div class="stat-row">
-        <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${sP!==null?`<div class="stat-sub"><span class="${sP>=0?'up-tag':'dn-tag'}">${fmtP(sP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div><div class="stat-sub">&nbsp;</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div>${stag(vcP)}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${stag(vP)}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${stag(rP)}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div>${stag(whP)}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${stag(sP)}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(ctrP)}</div>
+        <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(retP)}</div>
       </div>
 
       <!-- CHANNEL SNAPSHOT grouped headers -->
