@@ -767,14 +767,14 @@ function renderMeeting(){
       <!-- CHANNEL SNAPSHOT grouped headers -->
       <div class="section-head"><div class="section-label">Channel snapshot — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table" style="margin-bottom:36px">
-        <div style="display:grid;grid-template-columns:2fr 80px 80px 80px 80px 70px 70px 60px 3px 80px 80px 80px 80px 70px 70px 60px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
+        <div style="display:grid;grid-template-columns:2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
           <div></div>
-          <div style="grid-column:span 8;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${periodLabel}</div>
+          <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${periodLabel}</div>
           <div></div>
           <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
         </div>
-        <div style="display:grid;grid-template-columns:2fr 80px 80px 80px 80px 70px 70px 60px 3px 80px 80px 80px 80px 70px 70px 60px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
-          ${['Channel','Views','Revenue','Watch hrs','Subs','CTR','Retention','Videos','','Views','Revenue','Watch hrs','Subs','CTR','Retention','Videos'].map((h,i)=>`<span style="font-family:var(--mono);font-size:9px;color:${i===0||i===8?'transparent':i<8?'var(--ink2)':'var(--ink3)'};text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
+        <div style="display:grid;grid-template-columns:2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px;background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
+          ${['Channel','Videos','Views','Revenue','Watch hrs','Subs','CTR','Retention','','Videos','Views','Revenue','Watch hrs','Subs','CTR','Retention'].map((h,i)=>`<span style="font-family:var(--mono);font-size:9px;color:${i===0||i===8?'transparent':i<8?'var(--ink2)':'var(--ink3)'};text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
         </div>
         ${chs.map(ch=>{
           const rows=mo.filter(r=>r['Channel']===ch);
@@ -795,26 +795,26 @@ function renderMeeting(){
           const lyCTR=lyRows?avg(lyRows,'Avg CTR (%)'):null;
           const lyRet=lyRows?avg(lyRows,'Avg Retention %'):null;
           const lyVC=lyRows?agg(lyRows,'Video Count'):null;
-          const cols='2fr 80px 80px 80px 80px 70px 70px 60px 3px 80px 80px 80px 80px 70px 70px 60px';
+          const cols='2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px';
           const cell=(val,fmt,delta)=>`<div>${val!==null?`<div class="mono-cell">${fmt(val)}</div>${deltaSpan(delta)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}</div>`;
           const lyCell=(val,fmt)=>`<div class="mono-cell" style="color:var(--ink3)">${val!==null?fmt(val):'—'}</div>`;
           return`<div class="dt-row" style="grid-template-columns:${cols}">
             <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
+            ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
             ${cell(v,fmtN,yoy.vP)}
             ${cell(rev,fmtD,yoy.rP)}
             ${cell(wh,fmtN,yoy.whP)}
             ${cell(subs,fmtN,yoy.sP)}
             ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
             ${cell(ret,v=>v.toFixed(1)+'%',yoy.retP)}
-            ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
             <div style="background:var(--rule);width:1px;height:100%;margin:0 auto"></div>
+            ${lyCell(lyVC,v=>Math.round(v).toString())}
             ${lyCell(lyV,fmtN)}
             ${lyCell(lyRev,fmtD)}
             ${lyCell(lyWH,fmtN)}
             ${lyCell(lySubs,fmtN)}
             ${lyCell(lyCTR,v=>v.toFixed(1)+'%')}
             ${lyCell(lyRet,v=>v.toFixed(1)+'%')}
-            ${lyCell(lyVC,v=>Math.round(v).toString())}
           </div>`;
         }).join('')}
       </div>
