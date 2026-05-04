@@ -342,7 +342,10 @@ async function loadData(){
 async function fetchTab(tab){
   const url=`https://sheets.googleapis.com/v4/spreadsheets/${S.sheetId}/values/${encodeURIComponent(tab)}?key=${S.apiKey}`;
   const r=await fetch(url);
-  if(!r.ok) throw new Error(`Could not load "${tab}". Check your API key and Sheet sharing.`);
+  if(!r.ok){
+    const body=await r.json().catch(()=>({}));
+    throw new Error(`Could not load "${tab}" (${r.status}): ${body?.error?.message||r.statusText}`);
+  }
   const j=await r.json();
   const [headers,...rows]=j.values||[];
   if(!headers) return [];
