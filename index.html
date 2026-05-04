@@ -33,63 +33,38 @@ html { font-size: 16px; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
 
 /* LAYOUT */
-.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+.shell { display: block; min-height: 100vh; }
 
-/* SIDEBAR */
-.sidebar {
+/* TOP BAR */
+.topbar {
   background: var(--white);
-  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 36px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   position: sticky;
   top: 0;
-  height: 100vh;
-  overflow-y: auto;
+  z-index: 10;
 }
-.logo-block { padding: 32px 24px 28px; border-bottom: 1px solid var(--rule); }
-.logo-sup { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; }
-.logo-wordmark { font-family: var(--serif); font-size: 28px; color: var(--ink); line-height: 1; }
-.logo-wordmark em { font-style: italic; color: var(--ink3); }
-
-.nav-block { padding: 18px 0; border-bottom: 1px solid var(--rule); }
-.nav-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px 24px;
-  font-size: 15px; font-weight: 400;
-  color: var(--ink3);
-  cursor: pointer;
-  transition: color 0.12s;
-  border-left: 2px solid transparent;
-}
-.nav-item:hover { color: var(--ink); }
-.nav-item.active { color: var(--ink); font-weight: 600; border-left-color: var(--ink); }
-.nav-icon { width: 17px; height: 17px; flex-shrink: 0; stroke: currentColor; }
-
-.ch-block { padding: 18px 0; flex: 1; }
-.block-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.18em; text-transform: uppercase; padding: 0 24px; margin-bottom: 10px; }
-.ch-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 24px;
-  cursor: pointer; transition: background 0.1s;
-}
-.ch-row:hover { background: var(--surface2); }
-.ch-row.active { background: var(--surface2); }
-.ch-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ch-row-name { font-size: 14px; font-weight: 500; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ch-row-name.active { color: var(--ink); }
-.ch-row-stat { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-left: auto; flex-shrink: 0; }
-
-.sidebar-foot { padding: 20px 24px; border-top: 1px solid var(--rule); }
-.foot-sync { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-bottom: 10px; }
-.refresh-btn {
-  width: 100%; padding: 10px 14px;
-  background: var(--ink);
-  border: none; border-radius: 5px;
-  color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 600;
+.topbar-brand { display: flex; align-items: baseline; gap: 10px; }
+.topbar-sup { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; }
+.topbar-name { font-family: var(--serif); font-size: 20px; color: var(--ink); }
+.topbar-name em { font-style: italic; color: var(--ink3); }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-sync { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-right: 4px; }
+.topbar-btn {
+  padding: 7px 14px;
+  border-radius: 5px;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
   cursor: pointer; transition: opacity 0.15s;
+  border: 1px solid var(--rule2);
+  background: transparent; color: var(--ink3);
 }
-.refresh-btn:hover { opacity: 0.8; }
-.refresh-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.topbar-btn:hover { color: var(--ink); border-color: var(--ink2); }
+.topbar-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.topbar-btn.primary:hover { opacity: 0.8; }
+.topbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* MAIN */
 .main { min-width: 0; }
@@ -294,17 +269,17 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 </div>
 
 <div class="shell">
-  <aside class="sidebar">
-    <div class="logo-block">
-      <div class="logo-sup">Monthly Meeting</div>
-      <div class="logo-wordmark">Channel <em>Hub</em></div>
+  <div class="topbar">
+    <div class="topbar-brand">
+      <span class="topbar-sup">Monthly Meeting</span>
+      <span class="topbar-name">Channel <em>Hub</em></span>
     </div>
-    <div class="sidebar-foot">
-      <div class="foot-sync" id="lastSync">Not synced</div>
-      <button class="refresh-btn" id="syncBtn" onclick="loadData()">Refresh data</button>
-      <button class="refresh-btn" style="margin-top:8px;background:transparent;border:1px solid var(--rule2);color:var(--ink3)" onclick="document.getElementById('setupModal').style.display='flex'">Settings</button>
+    <div class="topbar-actions">
+      <span class="topbar-sync" id="lastSync">Not synced</span>
+      <button class="topbar-btn" onclick="document.getElementById('setupModal').style.display='flex'">Settings</button>
+      <button class="topbar-btn primary" id="syncBtn" onclick="loadData()">Refresh data</button>
     </div>
-  </aside>
+  </div>
 
   <main class="main" id="mainContent">
     <div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>
@@ -356,7 +331,6 @@ async function loadData(){
       const ym=`${prevMonth.getFullYear()}-${String(prevMonth.getMonth()+1).padStart(2,'0')}`;
       S.from=ym; S.to=ym;
     }
-    document.getElementById('lastSync').textContent='Synced '+new Date().toLocaleTimeString();
     buildSidebar();renderPage();
   }catch(e){showError(e.message);}
   setSyncing(false);
@@ -372,7 +346,11 @@ async function fetchTab(tab){
   return rows.map(row=>{const o={};headers.forEach((h,i)=>o[h]=row[i]??'');return o;});
 }
 
-function setSyncing(v){const b=document.getElementById('syncBtn');b.disabled=v;b.textContent=v?'Loading…':'Refresh data';}
+function setSyncing(v){
+  const b=document.getElementById('syncBtn');
+  b.disabled=v; b.textContent=v?'Loading…':'Refresh data';
+  if(!v) document.getElementById('lastSync').textContent='Synced '+new Date().toLocaleTimeString();
+}
 function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box fade"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>';}
 function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
 
@@ -679,16 +657,9 @@ function renderMeeting(){
     <div class="content fade">
       ${channelFilterHTML()}
 
-      <!-- EXEC SUMMARY -->
-      <div class="exec-summary">
-        <p>${para1}</p><br>
-        <p>${para2}</p>
-        ${para3?`<br><p>${para3}</p>`:''}
-        <div class="exec-meta">Prepared ${now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${chLabel} · ${periodLabel}</div>
-      </div>
-
       <!-- PORTFOLIO STATS -->
       <div class="stat-row">
+        <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div><div class="stat-sub">&nbsp;</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${vP!==null?`<div class="stat-sub"><span class="${vP>=0?'up-tag':'dn-tag'}">${fmtP(vP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${rP!==null?`<div class="stat-sub"><span class="${rP>=0?'up-tag':'dn-tag'}">${fmtP(rP)}</span> vs last yr</div>`:'<div class="stat-sub">&nbsp;</div>'}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div><div class="stat-sub">&nbsp;</div></div>
