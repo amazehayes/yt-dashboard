@@ -279,7 +279,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 
 <script>
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
-const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance' };
+const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs' };
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a'];
 
@@ -307,10 +307,11 @@ async function loadData(){
   if(!S.apiKey){document.getElementById('setupModal').style.display='flex';return;}
   setSyncing(true);setLoading();
   try{
-    const [summary,monthly,pervideo,videos]=await Promise.all([
-      fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos)
+    const [summary,monthly,pervideo,videos,costs]=await Promise.all([
+      fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos),
+      fetchTab(TABS.costs).catch(()=>[]),
     ]);
-    S.data={summary,monthly,pervideo,videos};
+    S.data={summary,monthly,pervideo,videos,costs};
     // Explicit channel color + order map
     const CH_ORDER = [
       'Dynasty League Football',
@@ -363,6 +364,42 @@ function setSyncing(v){
 }
 function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box fade"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>';}
 function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
+
+// Returns monthly cost totals keyed by "Channel|Year|Month"
+function getCostMap(){
+  const map={};
+  (S.data?.costs||[]).forEach(r=>{
+    if(!r['Channel']||!r['Month']||!r['Year']) return;
+    const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
+    if(!map[key]) map[key]={creator:0,editor:0,total:0};
+    map[key].creator+=parseFloat(r['Creator Cost ($)'])||0;
+    map[key].editor +=parseFloat(r['Editor Cost ($)'])||0;
+    map[key].total  +=parseFloat(r['Total Cost ($)'])||0;
+  });
+  return map;
+}
+// Sum costs for filtered monthly rows
+function aggCosts(moRows){
+  const map=getCostMap();
+  return moRows.reduce((s,r)=>{
+    const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
+    return s+(map[key]?.total||0);
+  },0);
+}
+
+// Get video count for a channel/period from Video Performance tab (publish-date based)
+function getVideoCount(ch, moRows){
+  const vc=agg(moRows,'Video Count');
+  if(vc>0) return vc;
+  // Fall back to counting from Video Performance tab
+  if(!S.data?.videos) return 0;
+  return filterVids(S.data.videos).filter(r=>r['Channel']===ch).length;
+}
+// Get subs from Channel Summary (most accurate total available)
+function getChSubs(ch){
+  const row=S.data?.summary?.find(r=>r['Channel']===ch);
+  return parseFloat(row?.['Total Subscribers'])||0;
+}
 
 function setSnapSort(key){
   if(S.snapSort===key) S.snapDir*=-1;
@@ -605,7 +642,12 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const lyWH=ly(r=>agg(r,'Watch Hours'),lyR), lySubs=ly(r=>agg(r,'Subscribers'),lyR);
     const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
     const lyVC=ly(r=>agg(r,'Video Count'),lyR);
-    // YoY deltas
+    const costMap=getCostMap();
+    const chCosts=r.reduce((s,row)=>{
+      const key=`${row['Channel']}|${row['Year']}|${row['Month']}`;
+      return s+(costMap[key]?.total||0);
+    },0);
+    const chProfit=rev!==null?rev-chCosts:null;
     const allMoRows=S.data.monthly.filter(row=>row['Channel']===ch);
     const years=getYears();const lastTwo=years.slice(-2);
     let prev=[];
@@ -627,7 +669,10 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
       ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
       ${cell(v,fmtN,yoy.vP)}
-      ${cell(rev,fmtD,yoy.rP)}
+      <div>
+        ${rev!==null?`<div class="mono-cell">${fmtD(rev)}</div>${deltaSpanS(yoy.rP)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}
+        ${chCosts>0?`<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:var(--ink3)">cost ${fmtD(chCosts)} · <span style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</span></div>`:''}
+      </div>
       ${cell(wh,fmtN,yoy.whP)}
       ${cell(subs,fmtN,yoy.sP)}
       ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
@@ -683,9 +728,9 @@ function renderMeeting(){
 
   // ── EXEC STATS ──────────────────────────────────────────────
   const tv=agg(mo,'Views'),twh=agg(mo,'Watch Hours');
-  const tr=agg(mo,'Revenue ($)'),ts=agg(mo,'Subscribers');
+  const tr=agg(mo,"Revenue ($)"),ts=agg(mo,"Subscribers")||chs.reduce((s,ch)=>s+getChSubs(ch),0);
   const actr=avg(mo,'Avg CTR (%)'),aret=avg(mo,'Avg Retention %');
-  const vc=agg(mo,'Video Count');
+  const vc=agg(mo,"Video Count")||filterVids(S.data.videos).length;
 
   let vP=null,rP=null,sP=null,whP=null,ctrP=null,retP=null,vcP=null,yrLabel='';
   if(isSingleMonth&&S.from){
@@ -723,6 +768,9 @@ function renderMeeting(){
       yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
     }
   }
+  const tc=aggCosts(mo);
+  const profit=tr-tc;
+
   const stag=(p)=>p!==null?`<div class="stat-sub"><span class="${p>=0?'up-tag':'dn-tag'}">${fmtP(p)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>';
 
   // ── EXEC NARRATIVE ──────────────────────────────────────────
@@ -768,7 +816,13 @@ function renderMeeting(){
     const cactr=avg(moRows,'Avg CTR (%)'),caret=avg(moRows,'Avg Retention %');
     const crpm=ctv>0?(ctr2/(ctv/1000)):0;
 
-    let cvP=null,cyrLabel='';
+    // Costs for this channel in this period
+    const costMap=getCostMap();
+    const chCosts=moRows.reduce((s,r)=>{
+      const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
+      return s+(costMap[key]?.total||0);
+    },0);
+    const chProfit=ctr2-chCosts;
     if(isSingleMonth&&S.from){
       const [fy,fm]=S.from.split('-').map(Number);
       const prev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
@@ -828,6 +882,9 @@ function renderMeeting(){
           <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(agg(moRows,'Video Count'))}</div>${deltaSpan2(cvP?.vcP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(ctv)}</div>${deltaSpan2(cvP?.vP,cyrLabel)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(ctr2)}</div>${deltaSpan2(cvP?.rP)}</div>
+          ${chCosts>0?`
+          <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${fmtD(chCosts)}</div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</div><div class="stat-sub">margin ${ctr2>0?((chProfit/ctr2)*100).toFixed(1)+'%':'—'}</div></div>`:''}
           <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(ctwh)}</div>${deltaSpan2(cvP?.whP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(cts)}</div>${deltaSpan2(cvP?.sP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${cactr.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>${deltaSpan2(cvP?.ctrP)}</div>
@@ -846,6 +903,38 @@ function renderMeeting(){
           </div>
           ${vidRows.map(r=>{const ret=parseFloat(r['Avg Retention %'])||0;const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px 65px 70px"><div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div><div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div><div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div></div>`;}).join('')}
         </div>`:`<div style="font-size:13px;color:var(--ink3);padding:12px 0">No videos published in this period.</div>`}
+        ${['Dynasty League Football','4for4 Fantasy Football','4for4 Live!'].includes(ch)?(()=>{
+          // Find videos published in this period that have no cost entry
+          const costMap=getCostMap();
+          const titlesWithCosts=new Set(
+            (S.data.costs||[])
+              .filter(r=>r['Channel']===ch)
+              .map(r=>(r['Video Title']||'').trim().toLowerCase())
+          );
+          const missingCost=vidRows.filter(r=>{
+            const title=(r['Title']||'').trim().toLowerCase();
+            return !titlesWithCosts.has(title);
+          });
+          if(!missingCost.length) return `<div style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--green)">✓ All videos have costs logged</div>`;
+          return `
+          <div class="section-head" style="margin-top:20px">
+            <div class="section-label" style="color:var(--red)">⚠ Missing costs — ${missingCost.length} video${missingCost.length!==1?'s':''}</div>
+            <div class="section-line"></div>
+          </div>
+          <div class="data-table">
+            <div class="dt-head" style="grid-template-columns:3fr 85px 80px">
+              <span>Title</span><span>Views</span><span>Published</span>
+            </div>
+            ${missingCost.map(r=>{
+              const pub=r['Published At']?r['Published At'].substring(0,12):'';
+              return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px;border-left:3px solid var(--red)">
+                <div><div class="dt-name">${r['Title']||'Untitled'}</div></div>
+                <div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div>
+                <div class="mono-cell" style="color:var(--ink3)">${pub}</div>
+              </div>`;
+            }).join('')}
+          </div>`;
+        })():''}
       </div>`,
       chartData:{vId,cId:null,rId:null,allPeriods,allMoRows,color}
     };
@@ -906,6 +995,9 @@ function renderMeeting(){
         <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div>${stag(vcP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${stag(vP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${stag(rP)}</div>
+        ${tc>0?`
+        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${fmtD(tc)}</div><div class="stat-sub">DLF · 4for4 FF · 4for4 Live!</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${fmtD(profit)}</div><div class="stat-sub">margin ${tr>0?((profit/tr)*100).toFixed(1)+'%':'—'}</div></div>`:''}
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div>${stag(whP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${stag(sP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(ctrP)}</div>
