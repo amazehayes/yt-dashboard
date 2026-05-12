@@ -387,13 +387,47 @@ function aggCosts(moRows){
   },0);
 }
 
+function getLYVidSubs(ch){
+  if(!S.data?.videos||!S.from) return null;
+  const [fy,fm]=S.from.split('-').map(Number);
+  const isSM=isSingleMonth();
+  return S.data.videos.filter(r=>{
+    if(r['Channel']!==ch) return false;
+    const pub=parseVidDate(r['Published At']);
+    if(!pub) return false;
+    const yr=pub.getFullYear(),mo=pub.getMonth()+1;
+    if(isSM) return yr===(fy-1)&&mo===fm;
+    const [ty,tm]=S.to.split('-').map(Number);
+    return(yr>fy-1||(yr===fy-1&&mo>=fm))&&(yr<ty-1||(yr===ty-1&&mo<=tm));
+  }).reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0);
+}
+function getLYVidCount(ch){
+  if(!S.data?.videos||!S.from) return null;
+  const [fy,fm]=S.from.split('-').map(Number);
+  const isSM=isSingleMonth();
+  return S.data.videos.filter(r=>{
+    if(r['Channel']!==ch) return false;
+    const pub=parseVidDate(r['Published At']);
+    if(!pub) return false;
+    const yr=pub.getFullYear(),mo=pub.getMonth()+1;
+    if(isSM) return yr===(fy-1)&&mo===fm;
+    const [ty,tm]=S.to.split('-').map(Number);
+    return(yr>fy-1||(yr===fy-1&&mo>=fm))&&(yr<ty-1||(yr===ty-1&&mo<=tm));
+  }).length;
+}
+
+function parseVidDate(str){
+  if(!str) return null;
+  const d=new Date(str);
+  return isNaN(d)?null:d;
+}
 // Get video count from Video Performance tab filtered by publish date in range
 function getVidCount(ch){
   if(!S.data?.videos) return 0;
   return S.data.videos.filter(r=>{
     if(r['Channel']!==ch) return false;
-    const pub=r['Published At']?new Date(r['Published At']):null;
-    if(!pub||isNaN(pub)) return false;
+    const pub=parseVidDate(r['Published At']);
+    if(!pub) return false;
     return inRange(pub.getFullYear(), pub.getMonth()+1);
   }).length;
 }
@@ -402,8 +436,8 @@ function getVidSubs(ch){
   if(!S.data?.videos) return 0;
   return S.data.videos.filter(r=>{
     if(r['Channel']!==ch) return false;
-    const pub=r['Published At']?new Date(r['Published At']):null;
-    if(!pub||isNaN(pub)) return false;
+    const pub=parseVidDate(r['Published At']);
+    if(!pub) return false;
     return inRange(pub.getFullYear(), pub.getMonth()+1);
   }).reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0);
 }
@@ -647,9 +681,12 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const lyR=getLYRows(ch);
     const ly=(col,rows)=>rows?col(rows):null;
     const lyV=ly(r=>agg(r,'Views'),lyR), lyRev=ly(r=>agg(r,'Revenue ($)'),lyR);
-    const lyWH=ly(r=>agg(r,'Watch Hours'),lyR), lySubs=ly(r=>agg(r,'Subscribers'),lyR);
+    const lyWH=ly(r=>agg(r,'Watch Hours'),lyR);
+    // Subs from Video Performance tab for LY period
+    const lySubs=getLYVidSubs(ch);
+    
     const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
-    const lyVC=ly(r=>agg(r,'Video Count'),lyR);
+    const lyVC=getLYVidCount(ch);
     const costMap=getCostMap();
     const chCosts=r.reduce((s,row)=>{
       const key=`${row['Channel']}|${row['Year']}|${row['Month']}`;
