@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost Logger — Betsperts Media</title>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f6f3;
+  --white: #ffffff;
+  --ink: #111111;
+  --ink2: #444444;
+  --ink3: #888888;
+  --rule: #e2e0da;
+  --rule2: #d0cec7;
+  --surface2: #f0ede8;
+  --green: #1a6645;
+  --green-bg: #e8f5ee;
+  --red: #b91c1c;
+  --red-bg: #fef2f2;
+  --blue: #1d4ed8;
+  --sans: 'Epilogue', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); min-height: 100vh; padding: 0; }
+
+.topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-brand { display: flex; align-items: baseline; gap: 10px; }
+.topbar-sup { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; }
+.topbar-name { font-family: var(--sans); font-size: 18px; font-weight: 600; color: var(--ink); }
+.topbar-link { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-decoration: none; }
+.topbar-link:hover { color: var(--ink); }
+
+.page { max-width: 680px; margin: 0 auto; padding: 40px 24px 80px; }
+
+.page-title { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--ink3); margin-bottom: 32px; }
+
+/* SETUP BANNER */
+.setup-banner {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.7;
+}
+.setup-banner strong { color: var(--ink); }
+.setup-banner code { font-family: var(--mono); font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+.setup-banner.hidden { display: none; }
+
+/* FORM */
+.form-card {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 28px 28px 24px;
+  margin-bottom: 20px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-family: var(--mono); font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--rule2);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: var(--sans); font-size: 14px;
+  color: var(--ink);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--ink); background: var(--white); }
+.field textarea { resize: vertical; min-height: 70px; }
+.field input[type=number] { font-family: var(--mono); }
+
+.total-row {
+  background: var(--surface2);
+  border-radius: 7px;
+  padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.total-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; }
+.total-val { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--ink); }
+
+.submit-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--ink);
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-family: var(--sans); font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.submit-btn:hover { opacity: 0.8; }
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* STATUS */
+.status { display: none; padding: 14px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 20px; }
+.status.ok { display: block; background: var(--green-bg); color: var(--green); }
+.status.err { display: block; background: var(--red-bg); color: var(--red); }
+
+/* RECENT LOG */
+.log-card {
+  background: var(--white);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.log-title { font-family: var(--mono); font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--surface2); }
+.log-empty { padding: 20px; font-size: 13px; color: var(--ink3); }
+.log-row { display: grid; grid-template-columns: 1fr 120px 90px 90px; padding: 12px 20px; border-bottom: 1px solid var(--rule); font-size: 13px; gap: 8px; align-items: center; }
+.log-row:last-child { border-bottom: none; }
+.log-ch { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-top: 2px; }
+.log-total { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+/* SETTINGS */
+.settings-row { display: flex; gap: 8px; margin-bottom: 28px; }
+.settings-row input {
+  flex: 1;
+  border: 1px solid var(--rule2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--ink);
+  background: var(--bg);
+  outline: none;
+}
+.settings-row input:focus { border-color: var(--ink); }
+.settings-btn {
+  padding: 8px 16px;
+  background: var(--ink);
+  border: none; border-radius: 6px;
+  color: #fff; font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer;
+}
+
+.divider { height: 1px; background: var(--rule); margin: 28px 0; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="topbar-sup">Betsperts Media</span>
+    <span class="topbar-name">Cost Logger</span>
+  </div>
+  <a href="https://amazehayes.github.io/yt-dashboard" class="topbar-link">← Dashboard</a>
+</div>
+
+<div class="page">
+  <div class="page-title">Log Video Costs</div>
+  <div class="page-sub">One entry per video — DLF and 4for4 Fantasy Football only</div>
+
+  <!-- SETUP BANNER -->
+  <div class="setup-banner" id="setupBanner">
+    <strong>First-time setup required.</strong> This page needs a Web App URL from Google Apps Script to write to your Sheet.<br><br>
+    In your Apps Script editor:<br>
+    1. Click <strong>Deploy → New deployment</strong><br>
+    2. Type: <strong>Web app</strong><br>
+    3. Execute as: <strong>Me</strong> · Who has access: <strong>Anyone</strong><br>
+    4. Click <strong>Deploy</strong> → copy the Web App URL<br>
+    5. Paste it below and click Save
+    <div class="settings-row" style="margin-top:12px;margin-bottom:0">
+      <input type="text" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="settings-btn" onclick="saveWebAppUrl()">Save</button>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status" id="status"></div>
+
+  <!-- FORM -->
+  <div class="form-card">
+    <div class="form-row">
+      <div class="field">
+        <label>Channel</label>
+        <select id="channel">
+          <option value="">Select channel...</option>
+          <option value="Dynasty League Football">Dynasty League Football</option>
+          <option value="4for4 Fantasy Football">4for4 Fantasy Football</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Month / Year</label>
+        <input type="month" id="monthYear" />
+      </div>
+    </div>
+    <div class="form-row full">
+      <div class="field">
+        <label>Video Title</label>
+        <input type="text" id="videoTitle" placeholder="Paste exact video title..." />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Creator Name</label>
+        <input type="text" id="creatorName" placeholder="Who made the video?" />
+      </div>
+      <div class="field">
+        <label>Creator Cost ($)</label>
+        <input type="number" id="creatorCost" placeholder="0.00" min="0" step="0.01" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Editor Name</label>
+        <input type="text" id="editorName" placeholder="Who edited it?" />
+      </div>
+      <div class="field">
+        <label>Editor Cost ($)</label>
+        <input type="number" id="editorCost" placeholder="0.00" min="0" step="0.01" />
+      </div>
+    </div>
+    <div class="form-row full">
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea id="notes" placeholder="Any additional notes..."></textarea>
+      </div>
+    </div>
+
+    <div class="total-row">
+      <span class="total-label">Total cost</span>
+      <span class="total-val" id="totalDisplay">$0.00</span>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Log Cost Entry</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- RECENT LOG -->
+  <div class="log-card">
+    <div class="log-title">Recent entries (this session)</div>
+    <div id="logList"><div class="log-empty">No entries logged yet this session.</div></div>
+  </div>
+</div>
+
+<script>
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let sessionLog = [];
+let webAppUrl = localStorage.getItem('cost_logger_url') || '';
+
+// Init
+(function init(){
+  // Set default month to last month
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  document.getElementById('monthYear').value =
+    `${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
+
+  if(webAppUrl){
+    document.getElementById('setupBanner').classList.add('hidden');
+    document.getElementById('webAppUrl').value = webAppUrl;
+  }
+
+  // Live total calculation
+  ['creatorCost','editorCost'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateTotal);
+  });
+})();
+
+function saveWebAppUrl(){
+  const url = document.getElementById('webAppUrl').value.trim();
+  if(!url){ alert('Please enter a URL.'); return; }
+  webAppUrl = url;
+  localStorage.setItem('cost_logger_url', url);
+  document.getElementById('setupBanner').classList.add('hidden');
+  showStatus('✓ Web App URL saved. You can now log costs.', 'ok');
+}
+
+function updateTotal(){
+  const c = parseFloat(document.getElementById('creatorCost').value) || 0;
+  const e = parseFloat(document.getElementById('editorCost').value) || 0;
+  document.getElementById('totalDisplay').textContent = '$' + (c+e).toFixed(2);
+}
+
+async function submitEntry(){
+  // Validate
+  const channel    = document.getElementById('channel').value;
+  const monthYear  = document.getElementById('monthYear').value;
+  const videoTitle = document.getElementById('videoTitle').value.trim();
+  const creatorName= document.getElementById('creatorName').value.trim();
+  const creatorCost= parseFloat(document.getElementById('creatorCost').value) || 0;
+  const editorName = document.getElementById('editorName').value.trim();
+  const editorCost = parseFloat(document.getElementById('editorCost').value) || 0;
+  const notes      = document.getElementById('notes').value.trim();
+  const total      = creatorCost + editorCost;
+
+  if(!channel)    { showStatus('Please select a channel.', 'err'); return; }
+  if(!monthYear)  { showStatus('Please select a month.', 'err'); return; }
+  if(!videoTitle) { showStatus('Please enter the video title.', 'err'); return; }
+  if(total <= 0)  { showStatus('Please enter at least one cost.', 'err'); return; }
+  if(!webAppUrl)  { showStatus('Web App URL not set — see setup instructions above.', 'err'); return; }
+
+  const [yr, mo] = monthYear.split('-').map(Number);
+  const period = MONTH_NAMES[mo-1] + ' ' + yr;
+
+  const payload = {
+    channel, month: mo, year: yr, period, videoTitle,
+    creatorName, creatorCost, editorName, editorCost,
+    total, notes,
+    timestamp: new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const resp = await fetch(webAppUrl, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const result = await resp.json();
+    if(result.status === 'ok'){
+      showStatus(`✓ Logged: "${videoTitle}" — $${total.toFixed(2)} total`, 'ok');
+      addToSessionLog(payload);
+      clearForm();
+    } else {
+      showStatus('Error: ' + (result.message || 'Unknown error'), 'err');
+    }
+  } catch(e) {
+    showStatus('Failed to connect. Check your Web App URL and try again.', 'err');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Log Cost Entry';
+}
+
+function clearForm(){
+  document.getElementById('videoTitle').value = '';
+  document.getElementById('creatorName').value = '';
+  document.getElementById('creatorCost').value = '';
+  document.getElementById('editorName').value = '';
+  document.getElementById('editorCost').value = '';
+  document.getElementById('notes').value = '';
+  document.getElementById('totalDisplay').textContent = '$0.00';
+  // Keep channel and month — likely logging multiple videos for same channel/month
+}
+
+function addToSessionLog(entry){
+  sessionLog.unshift(entry);
+  const list = document.getElementById('logList');
+  list.innerHTML = sessionLog.map(e=>`
+    <div class="log-row">
+      <div>
+        <div style="font-weight:600;font-size:13px">${e.videoTitle}</div>
+        <div class="log-ch">${e.channel} · ${e.period}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--ink3)">
+        ${e.creatorName?`Creator: $${e.creatorCost.toFixed(2)}`:''}
+        ${e.editorName?`<br>Editor: $${e.editorCost.toFixed(2)}`:''}
+      </div>
+      <div class="log-total">$${e.total.toFixed(2)}</div>
+    </div>
+  `).join('');
+}
+
+function showStatus(msg, type){
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+  setTimeout(()=>{ el.className = 'status'; }, 5000);
+}
+</script>
+</body>
+</html>
