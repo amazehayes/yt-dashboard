@@ -387,18 +387,25 @@ function aggCosts(moRows){
   },0);
 }
 
-// Get video count for a channel/period from Video Performance tab (publish-date based)
-function getVideoCount(ch, moRows){
-  const vc=agg(moRows,'Video Count');
-  if(vc>0) return vc;
-  // Fall back to counting from Video Performance tab
+// Get video count from Video Performance tab filtered by publish date in range
+function getVidCount(ch){
   if(!S.data?.videos) return 0;
-  return filterVids(S.data.videos).filter(r=>r['Channel']===ch).length;
+  return S.data.videos.filter(r=>{
+    if(r['Channel']!==ch) return false;
+    const pub=r['Published At']?new Date(r['Published At']):null;
+    if(!pub||isNaN(pub)) return false;
+    return inRange(pub.getFullYear(), pub.getMonth()+1);
+  }).length;
 }
-// Get subs from Channel Summary (most accurate total available)
-function getChSubs(ch){
-  const row=S.data?.summary?.find(r=>r['Channel']===ch);
-  return parseFloat(row?.['Total Subscribers'])||0;
+// Get subs from Video Performance tab filtered by publish date in range
+function getVidSubs(ch){
+  if(!S.data?.videos) return 0;
+  return S.data.videos.filter(r=>{
+    if(r['Channel']!==ch) return false;
+    const pub=r['Published At']?new Date(r['Published At']):null;
+    if(!pub||isNaN(pub)) return false;
+    return inRange(pub.getFullYear(), pub.getMonth()+1);
+  }).reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0);
 }
 
 function setSnapSort(key){
@@ -633,9 +640,10 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const r=mo.filter(r=>r['Channel']===ch);
     const color=chColor(ch);
     const v=r.length?agg(r,'Views'):null, wh=r.length?agg(r,'Watch Hours'):null;
-    const rev=r.length?agg(r,'Revenue ($)'):null, subs=r.length?agg(r,'Subscribers'):null;
+    const rev=r.length?agg(r,'Revenue ($)'):null;
+    const subs=getVidSubs(ch);
     const ctr=r.length?avg(r,'Avg CTR (%)'):null, ret=r.length?avg(r,'Avg Retention %'):null;
-    const vc2=r.length?agg(r,'Video Count'):null;
+    const vc2=getVidCount(ch);
     const lyR=getLYRows(ch);
     const ly=(col,rows)=>rows?col(rows):null;
     const lyV=ly(r=>agg(r,'Views'),lyR), lyRev=ly(r=>agg(r,'Revenue ($)'),lyR);
@@ -728,9 +736,9 @@ function renderMeeting(){
 
   // ── EXEC STATS ──────────────────────────────────────────────
   const tv=agg(mo,'Views'),twh=agg(mo,'Watch Hours');
-  const tr=agg(mo,"Revenue ($)"),ts=agg(mo,"Subscribers")||chs.reduce((s,ch)=>s+getChSubs(ch),0);
+  const tr=agg(mo,"Revenue ($)"),ts=chs.reduce((s,ch)=>s+getVidSubs(ch),0);
   const actr=avg(mo,'Avg CTR (%)'),aret=avg(mo,'Avg Retention %');
-  const vc=agg(mo,"Video Count")||filterVids(S.data.videos).length;
+  const vc=chs.reduce((s,ch)=>s+getVidCount(ch),0);
 
   let vP=null,rP=null,sP=null,whP=null,ctrP=null,retP=null,vcP=null,yrLabel='';
   if(isSingleMonth&&S.from){
@@ -812,7 +820,7 @@ function renderMeeting(){
     const moRows=mo.filter(r=>r['Channel']===ch);
     const vidRows=filterVids(allVids).filter(r=>r['Channel']===ch).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,10);
     const ctv=agg(moRows,'Views'),ctwh=agg(moRows,'Watch Hours');
-    const ctr2=agg(moRows,'Revenue ($)'),cts=agg(moRows,'Subscribers');
+    const ctr2=agg(moRows,'Revenue ($)'),cts=getVidSubs(ch);
     const cactr=avg(moRows,'Avg CTR (%)'),caret=avg(moRows,'Avg Retention %');
     const crpm=ctv>0?(ctr2/(ctv/1000)):0;
 
@@ -879,7 +887,7 @@ function renderMeeting(){
           <span style="font-family:var(--serif);font-size:28px;line-height:1">${ch}</span>
         </div>
         <div class="stat-row" style="border-left:4px solid ${color};margin-bottom:20px">
-          <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(agg(moRows,'Video Count'))}</div>${deltaSpan2(cvP?.vcP)}</div>
+          <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${getVidCount(ch)}</div>${deltaSpan2(cvP?.vcP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(ctv)}</div>${deltaSpan2(cvP?.vP,cyrLabel)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(ctr2)}</div>${deltaSpan2(cvP?.rP)}</div>
           ${chCosts>0?`
