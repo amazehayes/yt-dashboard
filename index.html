@@ -639,7 +639,7 @@ function renderPage(){
 }
 
 function buildSnapshotTable(chs, mo, lyPeriodLabel){
-  const cols='2fr 60px 80px 80px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px';
+  const cols='2fr 60px 80px 80px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 80px 80px 70px 70px';
   const headers=[
     {label:'Channel',key:null},
     {label:'Videos',key:'vc'},{label:'Views',key:'v'},{label:'Revenue',key:'rev'},
@@ -648,6 +648,7 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     {label:'CTR',key:'ctr'},{label:'Retention',key:'ret'},
     {label:'',key:null},
     {label:'Videos',key:null,ly:true},{label:'Views',key:null,ly:true},{label:'Revenue',key:null,ly:true},
+    {label:'Costs',key:null,ly:true},{label:'Profit',key:null,ly:true},
     {label:'Watch hrs',key:null,ly:true},{label:'Subs',key:null,ly:true},
     {label:'CTR',key:null,ly:true},{label:'Retention',key:null,ly:true},
   ];
@@ -697,6 +698,23 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const lySubs=getLYVidSubs(ch);
     const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
     const lyVC=getLYVidCount(ch);
+    // LY costs
+    const lyCosts=(S.data.costs||[]).reduce((s,r)=>{
+      if(r['Channel']!==ch) return s;
+      const yr=+r['Year'],mo=+r['Month'];
+      if(!yr||!mo) return s;
+      // Check if in LY range
+      if(!S.from) return s;
+      const [fy,fm]=S.from.split('-').map(Number);
+      const isSM2=S.from===S.to&&S.from!=='';
+      if(isSM2){ if(yr!==(fy-1)||mo!==fm) return s; }
+      else {
+        const [ty,tm]=S.to.split('-').map(Number);
+        if(!((yr>fy-1||(yr===fy-1&&mo>=fm))&&(yr<ty-1||(yr===ty-1&&mo<=tm)))) return s;
+      }
+      return s+parseCost(r['Total Cost ($)']);
+    },0);
+    const lyProfit=lyRev!==null?lyRev-lyCosts:null;
     const chCosts=(S.data.costs||[]).reduce((s,r)=>{
       if(r['Channel']!==ch) return s;
       const yr=+r['Year'],mo=+r['Month'];
@@ -738,6 +756,8 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       ${lyCell(lyVC,v=>Math.round(v).toString())}
       ${lyCell(lyV,fmtN)}
       ${lyCell(lyRev,fmtD)}
+      <div class="mono-cell" style="color:var(--ink3)">${showCost?(lyCosts>0?fmtD(lyCosts):'—'):'—'}</div>
+      <div class="mono-cell" style="color:var(--ink3)">${showCost&&lyProfit!==null&&lyCosts>0?fmtD(lyProfit):'—'}</div>
       ${lyCell(lyWH,fmtN)}
       ${lyCell(lySubs,fmtN)}
       ${lyCell(lyCTR,v=>v.toFixed(1)+'%')}
@@ -754,7 +774,7 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
         <div></div>
         <div style="grid-column:span 9;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
         <div></div>
-        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
+        <div style="grid-column:span 9;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
       </div>
       <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
         ${headers.map((h,i)=>{
