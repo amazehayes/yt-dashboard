@@ -380,10 +380,17 @@ function getCostMap(){
 }
 // Sum costs for filtered monthly rows
 function aggCosts(moRows){
-  const map=getCostMap();
-  return moRows.reduce((s,r)=>{
-    const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
-    return s+(map[key]?.total||0);
+  // Sum costs for channels and months that fall within the current date filter
+  if(!S.data?.costs||!S.from) return 0;
+  const [fy,fm]=S.from.split('-').map(Number);
+  const [ty,tm]=S.to?S.to.split('-').map(Number):[fy,fm];
+  const chs=S.channels;
+  return (S.data.costs||[]).reduce((s,r)=>{
+    if(!chs.includes(r['Channel'])) return s;
+    const yr=+r['Year'], mo=+r['Month'];
+    if(!yr||!mo) return s;
+    if(!inRange(yr,mo)) return s;
+    return s+(parseFloat(r['Total Cost ($)'])||0);
   },0);
 }
 
@@ -688,9 +695,11 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
     const lyVC=getLYVidCount(ch);
     const costMap=getCostMap();
-    const chCosts=r.reduce((s,row)=>{
-      const key=`${row['Channel']}|${row['Year']}|${row['Month']}`;
-      return s+(costMap[key]?.total||0);
+    const chCosts=(S.data.costs||[]).reduce((s,r)=>{
+      if(r['Channel']!==ch) return s;
+      const yr=+r['Year'],mo=+r['Month'];
+      if(!yr||!mo||!inRange(yr,mo)) return s;
+      return s+(parseFloat(r['Total Cost ($)'])||0);
     },0);
     const chProfit=rev!==null?rev-chCosts:null;
     const allMoRows=S.data.monthly.filter(row=>row['Channel']===ch);
@@ -862,10 +871,11 @@ function renderMeeting(){
     const crpm=ctv>0?(ctr2/(ctv/1000)):0;
 
     // Costs for this channel in this period
-    const costMap=getCostMap();
-    const chCosts=moRows.reduce((s,r)=>{
-      const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
-      return s+(costMap[key]?.total||0);
+    const chCosts=(S.data.costs||[]).reduce((s,r)=>{
+      if(r['Channel']!==ch) return s;
+      const yr=+r['Year'],mo=+r['Month'];
+      if(!yr||!mo||!inRange(yr,mo)) return s;
+      return s+(parseFloat(r['Total Cost ($)'])||0);
     },0);
     const chProfit=ctr2-chCosts;
     if(isSingleMonth&&S.from){
