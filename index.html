@@ -366,15 +366,17 @@ function setLoading(){document.getElementById('mainContent').innerHTML='<div cla
 function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
 
 // Returns monthly cost totals keyed by "Channel|Year|Month"
+function parseCost(v){ if(!v) return 0; const n=parseFloat(String(v).replace(/[$,]/g,'')); return isNaN(n)?0:n; }
+
 function getCostMap(){
   const map={};
   (S.data?.costs||[]).forEach(r=>{
     if(!r['Channel']||!r['Month']||!r['Year']) return;
     const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
     if(!map[key]) map[key]={creator:0,editor:0,total:0};
-    map[key].creator+=parseFloat(r['Creator Cost ($)'])||0;
-    map[key].editor +=parseFloat(r['Editor Cost ($)'])||0;
-    map[key].total  +=parseFloat(r['Total Cost ($)'])||0;
+    map[key].creator+=parseCost(r['Creator Cost ($)']);
+    map[key].editor +=parseCost(r['Editor Cost ($)']);
+    map[key].total  +=parseCost(r['Total Cost ($)']);
   });
   return map;
 }
@@ -390,7 +392,7 @@ function aggCosts(moRows){
     const yr=+r['Year'], mo=+r['Month'];
     if(!yr||!mo) return s;
     if(!inRange(yr,mo)) return s;
-    return s+(parseFloat(r['Total Cost ($)'])||0);
+    return s+parseCost(r['Total Cost ($)']);
   },0);
 }
 
@@ -699,7 +701,7 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       if(r['Channel']!==ch) return s;
       const yr=+r['Year'],mo=+r['Month'];
       if(!yr||!mo||!inRange(yr,mo)) return s;
-      return s+(parseFloat(r['Total Cost ($)'])||0);
+      return s+parseCost(r['Total Cost ($)']);
     },0);
     const chProfit=rev!==null?rev-chCosts:null;
     const allMoRows=S.data.monthly.filter(row=>row['Channel']===ch);
@@ -875,7 +877,7 @@ function renderMeeting(){
       if(r['Channel']!==ch) return s;
       const yr=+r['Year'],mo=+r['Month'];
       if(!yr||!mo||!inRange(yr,mo)) return s;
-      return s+(parseFloat(r['Total Cost ($)'])||0);
+      return s+parseCost(r['Total Cost ($)']);
     },0);
     const chProfit=ctr2-chCosts;
     if(isSingleMonth&&S.from){
