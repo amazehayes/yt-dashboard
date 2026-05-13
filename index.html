@@ -639,18 +639,21 @@ function renderPage(){
 }
 
 function buildSnapshotTable(chs, mo, lyPeriodLabel){
-  const cols='2fr 60px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px';
-  const hdStyle=(active,ly)=>`font-family:var(--mono);font-size:9px;color:${ly?'var(--ink3)':'var(--ink2)'};text-transform:uppercase;letter-spacing:.12em`;
+  const cols='2fr 60px 80px 80px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 70px 70px';
   const headers=[
-    {label:'Channel',key:null},{label:'Videos',key:'vc'},{label:'Views',key:'v'},
-    {label:'Revenue',key:'rev'},{label:'Watch hrs',key:'wh'},{label:'Subs',key:'subs'},
+    {label:'Channel',key:null},
+    {label:'Videos',key:'vc'},{label:'Views',key:'v'},{label:'Revenue',key:'rev'},
+    {label:'Costs',key:null},{label:'Profit',key:null},
+    {label:'Watch hrs',key:'wh'},{label:'Subs',key:'subs'},
     {label:'CTR',key:'ctr'},{label:'Retention',key:'ret'},
     {label:'',key:null},
     {label:'Videos',key:null,ly:true},{label:'Views',key:null,ly:true},{label:'Revenue',key:null,ly:true},
-    {label:'Watch hrs',key:null,ly:true},{label:'Subs',key:null,ly:true},{label:'CTR',key:null,ly:true},{label:'Retention',key:null,ly:true},
+    {label:'Watch hrs',key:null,ly:true},{label:'Subs',key:null,ly:true},
+    {label:'CTR',key:null,ly:true},{label:'Retention',key:null,ly:true},
   ];
+  const CURRENT_COLS=9; // number of data columns in current period (excluding channel + divider)
+  const LY_COLS=7;
 
-  // Get periodLabel from S state
   const now=new Date();
   const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
   const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
@@ -691,12 +694,9 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const ly=(col,rows)=>rows?col(rows):null;
     const lyV=ly(r=>agg(r,'Views'),lyR), lyRev=ly(r=>agg(r,'Revenue ($)'),lyR);
     const lyWH=ly(r=>agg(r,'Watch Hours'),lyR);
-    // Subs from Video Performance tab for LY period
     const lySubs=getLYVidSubs(ch);
-    
     const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
     const lyVC=getLYVidCount(ch);
-    const costMap=getCostMap();
     const chCosts=(S.data.costs||[]).reduce((s,r)=>{
       if(r['Channel']!==ch) return s;
       const yr=+r['Year'],mo=+r['Month'];
@@ -721,14 +721,15 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     };
     const cell=(val,fmt,delta)=>`<div>${val!==null?`<div class="mono-cell">${fmt(val)}</div>${deltaSpanS(delta)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}</div>`;
     const lyCell=(val,fmt)=>`<div class="mono-cell" style="color:var(--ink3)">${val!==null?fmt(val):'—'}</div>`;
+    const COST_CHS=['Dynasty League Football','4for4 Fantasy Football','4for4 Live!'];
+    const showCost=COST_CHS.includes(ch);
     return `<div class="dt-row" style="grid-template-columns:${cols}">
       <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
       ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
       ${cell(v,fmtN,yoy.vP)}
-      <div>
-        ${rev!==null?`<div class="mono-cell">${fmtD(rev)}</div>${deltaSpanS(yoy.rP)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}
-        ${chCosts>0?`<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:var(--ink3)">cost ${fmtD(chCosts)} · <span style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</span></div>`:''}
-      </div>
+      ${cell(rev,fmtD,yoy.rP)}
+      <div class="mono-cell" style="color:var(--red)">${showCost?(chCosts>0?fmtD(chCosts):'—'):'—'}</div>
+      <div class="mono-cell" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${showCost&&chProfit!==null&&chCosts>0?fmtD(chProfit):'—'}</div>
       ${cell(wh,fmtN,yoy.whP)}
       ${cell(subs,fmtN,yoy.sP)}
       ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
@@ -751,7 +752,7 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     <div class="data-table" style="margin-bottom:36px">
       <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
         <div></div>
-        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
+        <div style="grid-column:span 9;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
         <div></div>
         <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
       </div>
