@@ -927,9 +927,8 @@ function renderMeeting(){
           <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${getVidCount(ch)}</div>${deltaSpan2(cvP?.vcP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(ctv)}</div>${deltaSpan2(cvP?.vP,cyrLabel)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(ctr2)}</div>${deltaSpan2(cvP?.rP)}</div>
-          ${chCosts>0?`
-          <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${fmtD(chCosts)}</div><div class="stat-sub">&nbsp;</div></div>
-          <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</div><div class="stat-sub">margin ${ctr2>0?((chProfit/ctr2)*100).toFixed(1)+'%':'—'}</div></div>`:''}
+          <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${chCosts>0?fmtD(chCosts):'—'}</div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${chCosts>0?fmtD(chProfit):'—'}</div><div class="stat-sub">${chCosts>0&&ctr2>0?'margin '+((chProfit/ctr2)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
           <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(ctwh)}</div>${deltaSpan2(cvP?.whP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(cts)}</div>${deltaSpan2(cvP?.sP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${cactr.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>${deltaSpan2(cvP?.ctrP)}</div>
@@ -948,38 +947,6 @@ function renderMeeting(){
           </div>
           ${vidRows.map(r=>{const ret=parseFloat(r['Avg Retention %'])||0;const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px 65px 70px"><div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div><div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div><div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div></div>`;}).join('')}
         </div>`:`<div style="font-size:13px;color:var(--ink3);padding:12px 0">No videos published in this period.</div>`}
-        ${['Dynasty League Football','4for4 Fantasy Football','4for4 Live!'].includes(ch)?(()=>{
-          // Find videos published in this period that have no cost entry
-          const costMap=getCostMap();
-          const titlesWithCosts=new Set(
-            (S.data.costs||[])
-              .filter(r=>r['Channel']===ch)
-              .map(r=>(r['Video Title']||'').trim().toLowerCase())
-          );
-          const missingCost=vidRows.filter(r=>{
-            const title=(r['Title']||'').trim().toLowerCase();
-            return !titlesWithCosts.has(title);
-          });
-          if(!missingCost.length) return `<div style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--green)">✓ All videos have costs logged</div>`;
-          return `
-          <div class="section-head" style="margin-top:20px">
-            <div class="section-label" style="color:var(--red)">⚠ Missing costs — ${missingCost.length} video${missingCost.length!==1?'s':''}</div>
-            <div class="section-line"></div>
-          </div>
-          <div class="data-table">
-            <div class="dt-head" style="grid-template-columns:3fr 85px 80px">
-              <span>Title</span><span>Views</span><span>Published</span>
-            </div>
-            ${missingCost.map(r=>{
-              const pub=r['Published At']?r['Published At'].substring(0,12):'';
-              return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px;border-left:3px solid var(--red)">
-                <div><div class="dt-name">${r['Title']||'Untitled'}</div></div>
-                <div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div>
-                <div class="mono-cell" style="color:var(--ink3)">${pub}</div>
-              </div>`;
-            }).join('')}
-          </div>`;
-        })():''}
       </div>`,
       chartData:{vId,cId:null,rId:null,allPeriods,allMoRows,color}
     };
@@ -1036,18 +1003,17 @@ function renderMeeting(){
   document.getElementById('mainContent').innerHTML=`
     <div class="content fade">
       ${channelFilterHTML()}
-      <div class="stat-row">
+      ${chs.length>1?`<div class="stat-row">
         <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div>${stag(vcP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${stag(vP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${stag(rP)}</div>
-        ${tc>0?`
-        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${fmtD(tc)}</div><div class="stat-sub">DLF · 4for4 FF · 4for4 Live!</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${fmtD(profit)}</div><div class="stat-sub">margin ${tr>0?((profit/tr)*100).toFixed(1)+'%':'—'}</div></div>`:''}
+        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${tc>0?fmtD(tc):'—'}</div><div class="stat-sub">${tc>0?'DLF · 4for4 FF · 4for4 Live!':'no cost data'}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${tc>0?fmtD(profit):'—'}</div><div class="stat-sub">${tc>0&&tr>0?'margin '+((profit/tr)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div>${stag(whP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${stag(sP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(ctrP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(retP)}</div>
-      </div>
+      </div>`:''}
       ${snapshotHTML}
       <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
       ${deepDiveSections.map(s=>s.html).join('')}
