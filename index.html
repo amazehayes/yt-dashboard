@@ -746,8 +746,8 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
       ${cell(v,fmtN,yoy.vP)}
       ${cell(rev,fmtD,yoy.rP)}
-      <div class="mono-cell" style="color:var(--red)">${showCost?(chCosts>0?fmtD(chCosts):'—'):'—'}</div>
-      <div class="mono-cell" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${showCost&&chProfit!==null&&chCosts>0?fmtD(chProfit):'—'}</div>
+      <div class="mono-cell" style="color:var(--red)">${chCosts>0?fmtD(chCosts):'$0'}</div>
+      <div class="mono-cell" style="color:${chProfit!==null&&chProfit>=0?'var(--green)':'var(--red)'}">${chProfit!==null?fmtD(chProfit):'—'}</div>
       ${cell(wh,fmtN,yoy.whP)}
       ${cell(subs,fmtN,yoy.sP)}
       ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
@@ -756,8 +756,8 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       ${lyCell(lyVC,v=>Math.round(v).toString())}
       ${lyCell(lyV,fmtN)}
       ${lyCell(lyRev,fmtD)}
-      <div class="mono-cell" style="color:var(--ink3)">${showCost?(lyCosts>0?fmtD(lyCosts):'—'):'—'}</div>
-      <div class="mono-cell" style="color:var(--ink3)">${showCost&&lyProfit!==null&&lyCosts>0?fmtD(lyProfit):'—'}</div>
+      <div class="mono-cell" style="color:var(--ink3)">${lyCosts>0?fmtD(lyCosts):'$0'}</div>
+      <div class="mono-cell" style="color:var(--ink3)">${lyProfit!==null?fmtD(lyProfit):'—'}</div>
       ${lyCell(lyWH,fmtN)}
       ${lyCell(lySubs,fmtN)}
       ${lyCell(lyCTR,v=>v.toFixed(1)+'%')}
@@ -960,8 +960,8 @@ function renderMeeting(){
           <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${getVidCount(ch)}</div>${deltaSpan2(cvP?.vcP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(ctv)}</div>${deltaSpan2(cvP?.vP,cyrLabel)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(ctr2)}</div>${deltaSpan2(cvP?.rP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${chCosts>0?fmtD(chCosts):'—'}</div><div class="stat-sub">&nbsp;</div></div>
-          <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${chCosts>0?fmtD(chProfit):'—'}</div><div class="stat-sub">${chCosts>0&&ctr2>0?'margin '+((chProfit/ctr2)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${chCosts>0?fmtD(chCosts):'$0'}</div><div class="stat-sub">&nbsp;</div></div>
+          <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</div><div class="stat-sub">${ctr2>0?'margin '+((chProfit/ctr2)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
           <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(ctwh)}</div>${deltaSpan2(cvP?.whP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(cts)}</div>${deltaSpan2(cvP?.sP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${cactr.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>${deltaSpan2(cvP?.ctrP)}</div>
@@ -1040,8 +1040,8 @@ function renderMeeting(){
         <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div>${stag(vcP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${stag(vP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${stag(rP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${tc>0?fmtD(tc):'—'}</div><div class="stat-sub">${tc>0?'DLF · 4for4 FF · 4for4 Live!':'no cost data'}</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${tc>0?fmtD(profit):'—'}</div><div class="stat-sub">${tc>0&&tr>0?'margin '+((profit/tr)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${tc>0?fmtD(tc):'$0'}</div><div class="stat-sub">&nbsp;</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${fmtD(profit)}</div><div class="stat-sub">${tr>0?'margin '+((profit/tr)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div>${stag(whP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${stag(sP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(ctrP)}</div>
