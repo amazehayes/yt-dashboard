@@ -746,8 +746,8 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
       ${cell(v,fmtN,yoy.vP)}
       ${cell(rev,fmtD,yoy.rP)}
-      <div class="mono-cell" style="color:var(--red)">${chCosts>0?fmtD(chCosts):'$0'}</div>
-      <div class="mono-cell" style="color:${chProfit!==null&&chProfit>=0?'var(--green)':'var(--red)'}">${chProfit!==null?fmtD(chProfit):'—'}</div>
+      <div class="mono-cell" style="color:${chCosts>0?'var(--red)':'var(--ink)'}">${chCosts>0?fmtD(chCosts):'$0'}</div>
+      <div class="mono-cell" style="color:${chProfit!==null&&chProfit>0?'var(--green)':chProfit!==null&&chProfit<0?'var(--red)':'var(--ink)'}">${chProfit!==null?fmtD(chProfit):'—'}</div>
       ${cell(wh,fmtN,yoy.whP)}
       ${cell(subs,fmtN,yoy.sP)}
       ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
