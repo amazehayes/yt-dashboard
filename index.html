@@ -211,6 +211,12 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .sc-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .sc-tag { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
 
+/* CONTENT TYPE BAR */
+.ct-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface2); margin-bottom: 14px; }
+.ct-bar-seg { height: 100%; transition: width 0.6s ease; }
+.ct-legend { display: flex; gap: 18px; flex-wrap: wrap; }
+.ct-legend-item { display: flex; align-items: center; }
+
 /* MODAL */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .modal { background: var(--white); border: 1px solid var(--rule); border-radius: 12px; padding: 36px; max-width: 460px; width: 90%; }
@@ -279,7 +285,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 
 <script>
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
-const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs' };
+const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type' };
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a','#7c3aed'];
 
@@ -307,11 +313,12 @@ async function loadData(){
   if(!S.apiKey){document.getElementById('setupModal').style.display='flex';return;}
   setSyncing(true);setLoading();
   try{
-    const [summary,monthly,pervideo,videos,costs]=await Promise.all([
+    const [summary,monthly,pervideo,videos,costs,contentType]=await Promise.all([
       fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos),
       fetchTab(TABS.costs).catch(()=>[]),
+      fetchTab(TABS.contentType).catch(()=>[]), // new API-sourced tab — optional, degrades gracefully if missing
     ]);
-    S.data={summary,monthly,pervideo,videos,costs};
+    S.data={summary,monthly,pervideo,videos,costs,contentType};
     // Explicit channel color + order map
     const CH_ORDER = [
       'Dynasty League Football',
@@ -526,6 +533,45 @@ function fmtD(n){return '$'+Math.round(n).toLocaleString();}
 function pct(a,b){return b?(((a-b)/b)*100):null;}
 function fmtP(p){if(p===null)return '';return(p>=0?'+':'')+p.toFixed(1)+'%';}
 function chColor(name){return CH[name]||'#aaa';}
+
+// ── CONTENT TYPE MIX (from "API - Content Type" tab) ───────────
+// Normalizes the two source formats: the API's raw enum values
+// (liveStream/shorts/videoOnDemand/creatorContentTypeUnspecified)
+// for the 6 API-pulled channels, and Studio's own display labels
+// (Live stream/Shorts/Videos) for Betsperts Golf's Chrome-derived
+// lifetime-only row. Always lifetime totals, not date-filtered —
+// content-type mix is a structural characteristic of a channel, and
+// Betsperts Golf's row only exists as a lifetime aggregate anyway.
+const CT_LABELS = { live:'Live', shorts:'Shorts', video:'Video', other:'Other' };
+const CT_COLORS = { live:'#db2777', shorts:'#16a34a', video:'#1d4ed8', other:'#aaaaaa' };
+function normalizeContentType(v){
+  const s=(v||'').toLowerCase();
+  if(s.includes('live')) return 'live';
+  if(s.includes('short')) return 'shorts';
+  if(s.includes('video')) return 'video';
+  return 'other';
+}
+function getContentTypeMix(ch){
+  const rows=(S.data?.contentType||[]).filter(r=>r['Channel']===ch);
+  const mix={live:0,shorts:0,video:0,other:0};
+  let total=0;
+  rows.forEach(r=>{
+    const key=normalizeContentType(r['Content Type']);
+    const v=parseFloat(r['Views'])||0;
+    mix[key]+=v; total+=v;
+  });
+  return {mix,total};
+}
+function contentTypeBarHTML(ch){
+  const {mix,total}=getContentTypeMix(ch);
+  if(!total) return '';
+  const segs=['live','shorts','video','other'].filter(k=>mix[k]>0);
+  return `<div class="chart-card" style="margin-bottom:16px">
+    <div class="card-top"><div class="card-label">Content type mix — lifetime views</div></div>
+    <div class="ct-bar">${segs.map(k=>`<div class="ct-bar-seg" style="width:${(mix[k]/total*100).toFixed(2)}%;background:${CT_COLORS[k]}" title="${CT_LABELS[k]}: ${fmtN(mix[k])} views"></div>`).join('')}</div>
+    <div class="ct-legend">${segs.map(k=>`<span class="ct-legend-item"><span class="leg-dot" style="background:${CT_COLORS[k]}"></span><span class="leg-txt">${CT_LABELS[k]} · ${(mix[k]/total*100).toFixed(1)}% · ${fmtN(mix[k])}</span></span>`).join('')}</div>
+  </div>`;
+}
 function getYears(){return[...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].map(Number).sort();}
 function sortPeriods(ps){
   return[...ps].sort((a,b)=>{
@@ -969,6 +1015,7 @@ function renderMeeting(){
           <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${caret.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>${deltaSpan2(cvP?.retP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Est. RPM</div><div class="stat-num">$${crpm.toFixed(2)}</div><div class="stat-sub">per 1K views</div></div>
         </div>
+        ${contentTypeBarHTML(ch)}
         <div class="chart-card wide" style="margin-bottom:16px">
           <div class="card-top"><div class="card-label">Monthly views — full history</div></div>
           <div style="position:relative;height:240px"><canvas id="${vId}" role="img" aria-label="${ch} views history">${ch} views</canvas></div>
