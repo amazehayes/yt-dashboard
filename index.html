@@ -285,7 +285,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 
 <script>
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
-const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type' };
+const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type', apiMonthly:'API - Monthly', apiVideos:'API - Video Performance' };
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a','#7c3aed'];
 
@@ -313,11 +313,28 @@ async function loadData(){
   if(!S.apiKey){document.getElementById('setupModal').style.display='flex';return;}
   setSyncing(true);setLoading();
   try{
-    const [summary,monthly,pervideo,videos,costs,contentType]=await Promise.all([
+    const [summaryRaw,monthlyOld,pervideo,videosOld,costs,contentType,apiMonthly,apiVideos]=await Promise.all([
       fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos),
       fetchTab(TABS.costs).catch(()=>[]),
-      fetchTab(TABS.contentType).catch(()=>[]), // new API-sourced tab — optional, degrades gracefully if missing
+      fetchTab(TABS.contentType).catch(()=>[]),
+      fetchTab(TABS.apiMonthly).catch(()=>[]),
+      fetchTab(TABS.apiVideos).catch(()=>[]),
     ]);
+    // Merge: for the 6 API-covered channels, API data fully replaces the old
+    // Chrome-pipeline data (superset — full history, no 500-row cap, current
+    // partial month included). Betsperts Golf has no API monthly/video data
+    // at all (manager-only access, can't authenticate as that channel via
+    // OAuth) so it falls back to the original tabs entirely, unchanged.
+    const videos=buildMergedVideos(videosOld,apiVideos);
+    const monthly=buildMergedMonthly(monthlyOld,apiMonthly,videos);
+    // Ensure every channel with real data (old OR new) appears in the
+    // filterable channel list — "Channel Summary" predates Move The Line
+    // and would never surface it on its own.
+    const knownChannels=new Set(summaryRaw.map(r=>r['Channel']).filter(Boolean));
+    const summary=[...summaryRaw];
+    new Set([...apiMonthly.map(r=>r['Channel']),...apiVideos.map(r=>r['Channel'])]).forEach(ch=>{
+      if(ch && !knownChannels.has(ch)){ summary.push({Channel:ch}); knownChannels.add(ch); }
+    });
     S.data={summary,monthly,pervideo,videos,costs,contentType};
     // Explicit channel color + order map
     const CH_ORDER = [
@@ -327,7 +344,7 @@ async function loadData(){
       'Bleacher Nation',
       'Deep Dive Podcast',
       'Betsperts Golf',
-      '4for4 Shorts',
+      'Move The Line',
     ];
     CH_ORDER.forEach((name, i) => { CH[name] = PAL[i]; });
     // Fallback for any channel not in the list
@@ -533,6 +550,73 @@ function fmtD(n){return '$'+Math.round(n).toLocaleString();}
 function pct(a,b){return b?(((a-b)/b)*100):null;}
 function fmtP(p){if(p===null)return '';return(p>=0?'+':'')+p.toFixed(1)+'%';}
 function chColor(name){return CH[name]||'#aaa';}
+
+// ── MERGE: API data (6 channels) + original Chrome-pipeline data ──
+// (Betsperts Golf only, since it has no API monthly/video data at all).
+// Both merge functions normalize API rows into the exact row shape the
+// rest of the app already expects, so every existing calculation
+// function (agg/filterMo/filterVids/snapshot table/deep dives/etc.)
+// keeps working completely unchanged.
+function buildMergedVideos(oldVideos, apiVideos){
+  const apiChannels=new Set(apiVideos.map(r=>r['Channel']));
+  const fromApi=apiVideos.map(r=>({
+    'Channel': r['Channel'],
+    'Video ID': r['Video ID'],
+    'Title': r['Title'],
+    'Published At': r['Published At'],
+    'Duration (s)': r['Duration (s)'],
+    'Avg View Duration': r['Avg View Duration (s)'],
+    'Avg Retention %': r['Avg Retention %'],
+    'Views': r['Views'],
+    'Watch Hours': r['Watch Hours'],
+    'Subscribers': r['Subscribers (net)'],
+    'Revenue ($)': r['Revenue ($)'],
+    'Impressions': '0',
+    'CTR (%)': '', // genuinely unavailable via the public Analytics API — not a bug
+  }));
+  const fromOld=oldVideos.filter(r=>!apiChannels.has(r['Channel'])); // Betsperts Golf only
+  return [...fromApi,...fromOld];
+}
+function buildMergedMonthly(oldMonthly, apiMonthly, mergedVideos){
+  const apiChannels=new Set(apiMonthly.map(r=>r['Channel']));
+  // Old rows indexed by Channel|YYYY-MM, purely to carry over Avg CTR (%)
+  // for months where it's known — the one metric the API can never supply.
+  const oldByKey={};
+  oldMonthly.forEach(r=>{
+    const yr=+r['Year'],mo=+r['Month'];
+    if(!yr||!mo) return;
+    oldByKey[`${r['Channel']}|${yr}-${String(mo).padStart(2,'0')}`]=r;
+  });
+  // Video counts per Channel|YYYY-MM, publish-date based, from the already-
+  // merged video list — mirrors how getVidCount() already works elsewhere.
+  const vcByKey={};
+  mergedVideos.forEach(r=>{
+    const pub=r['Published At']?new Date(r['Published At']):null;
+    if(!pub||isNaN(pub)) return;
+    const key=`${r['Channel']}|${pub.getFullYear()}-${String(pub.getMonth()+1).padStart(2,'0')}`;
+    vcByKey[key]=(vcByKey[key]||0)+1;
+  });
+  const fromApi=apiMonthly.map(r=>{
+    const [yr,mo]=r['Month'].split('-').map(Number);
+    const key=`${r['Channel']}|${r['Month']}`;
+    const old=oldByKey[key];
+    return {
+      'Channel': r['Channel'],
+      'Year': String(yr),
+      'Month': String(mo),
+      'Period': `${MO[mo-1]} ${yr}`,
+      'Views': r['Views'],
+      'Watch Hours': r['Watch Hours'],
+      'Revenue ($)': r['Revenue ($)'],
+      'Avg CTR (%)': old ? old['Avg CTR (%)'] : '0', // best-effort carryover; API has no CTR at all
+      'Avg Retention %': r['Retention %'],
+      'Subscribers': r['Subscribers (net)'],
+      'Video Count': String(vcByKey[key]||0),
+    };
+  });
+  const fromOld=oldMonthly.filter(r=>!apiChannels.has(r['Channel'])); // Betsperts Golf only
+  return [...fromApi,...fromOld];
+}
 
 // ── CONTENT TYPE MIX (from "API - Content Type" tab) ───────────
 // Normalizes the two source formats: the API's raw enum values
@@ -1034,7 +1118,7 @@ function renderMeeting(){
   }
 
   // ── BUILD PAGE ──────────────────────────────────────────────
-  const CH_ORDER=['Dynasty League Football','4for4 Fantasy Football','4for4 Live!','Bleacher Nation','Deep Dive Podcast','Betsperts Golf','4for4 Shorts'];
+  const CH_ORDER=['Dynasty League Football','4for4 Fantasy Football','4for4 Live!','Bleacher Nation','Deep Dive Podcast','Betsperts Golf','Move The Line'];
   const sortedChs=[...chs].sort((a,b)=>{const ai=CH_ORDER.indexOf(a);const bi=CH_ORDER.indexOf(b);return(ai===-1?999:ai)-(bi===-1?999:bi);});
   const deepDiveSections=sortedChs.map((ch,i)=>deepDiveSection(ch,i));
 
