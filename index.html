@@ -623,9 +623,12 @@ function buildMergedMonthly(oldMonthly, apiMonthly, mergedVideos){
 // (liveStream/shorts/videoOnDemand/creatorContentTypeUnspecified)
 // for the 6 API-pulled channels, and Studio's own display labels
 // (Live stream/Shorts/Videos) for Betsperts Golf's Chrome-derived
-// lifetime-only row. Always lifetime totals, not date-filtered —
-// content-type mix is a structural characteristic of a channel, and
-// Betsperts Golf's row only exists as a lifetime aggregate anyway.
+// lifetime-only row. Respects the app's date filter: with no filter
+// ("All time") every row counts, including lifetime-only rows. With a
+// specific range selected, only rows carrying a real "YYYY-MM" period
+// count — Betsperts Golf's row is labeled "Lifetime" (no monthly
+// breakdown exists for it), so it correctly drops out of any filtered
+// view rather than silently showing unfiltered numbers.
 const CT_LABELS = { live:'Live', shorts:'Shorts', video:'Video', other:'Other' };
 const CT_COLORS = { live:'#db2777', shorts:'#16a34a', video:'#1d4ed8', other:'#aaaaaa' };
 function normalizeContentType(v){
@@ -636,7 +639,15 @@ function normalizeContentType(v){
   return 'other';
 }
 function getContentTypeMix(ch){
-  const rows=(S.data?.contentType||[]).filter(r=>r['Channel']===ch);
+  const noFilter = !S.from && !S.to;
+  const rows=(S.data?.contentType||[]).filter(r=>{
+    if(r['Channel']!==ch) return false;
+    if(noFilter) return true;
+    const p=r['Period'];
+    if(!/^\d{4}-\d{2}$/.test(p)) return false; // e.g. "Lifetime" — can't be date-filtered
+    const [yr,mo]=p.split('-').map(Number);
+    return inRange(yr,mo);
+  });
   const mix={live:0,shorts:0,video:0,other:0};
   let total=0;
   rows.forEach(r=>{
@@ -649,9 +660,11 @@ function getContentTypeMix(ch){
 function contentTypeBarHTML(ch){
   const {mix,total}=getContentTypeMix(ch);
   if(!total) return '';
+  const isSM=S.from===S.to&&S.from!=='';
+  const label=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'all-time');
   const segs=['live','shorts','video','other'].filter(k=>mix[k]>0);
   return `<div class="chart-card" style="margin-bottom:16px">
-    <div class="card-top"><div class="card-label">Content type mix — lifetime views</div></div>
+    <div class="card-top"><div class="card-label">Content type mix — ${label} views</div></div>
     <div class="ct-bar">${segs.map(k=>`<div class="ct-bar-seg" style="width:${(mix[k]/total*100).toFixed(2)}%;background:${CT_COLORS[k]}" title="${CT_LABELS[k]}: ${fmtN(mix[k])} views"></div>`).join('')}</div>
     <div class="ct-legend">${segs.map(k=>`<span class="ct-legend-item"><span class="leg-dot" style="background:${CT_COLORS[k]}"></span><span class="leg-txt">${CT_LABELS[k]} · ${(mix[k]/total*100).toFixed(1)}% · ${fmtN(mix[k])}</span></span>`).join('')}</div>
   </div>`;
@@ -686,6 +699,15 @@ function getLYRows(ch){
   }
 }
 function isSingleMonth(){ return S.from===S.to&&S.from!==''; }
+const FULL_MO = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Builds a display label from the ACTUALLY selected month (S.from, "YYYY-MM"),
+// not from "today minus one month" — the previous version always showed last
+// calendar month's name regardless of which month was actually selected.
+function monthLabelFromYM(ym){
+  if(!ym) return '';
+  const [y,m]=ym.split('-').map(Number);
+  return `${FULL_MO[m-1]} ${y}`;
+}
 
 function isLastMonth(){
   const now=new Date();
@@ -770,27 +792,20 @@ function renderPage(){
 }
 
 function buildSnapshotTable(chs, mo, lyPeriodLabel){
-  const cols='2fr 60px 80px 80px 80px 80px 80px 80px 70px 70px 3px 60px 80px 80px 80px 80px 80px 80px 70px 70px';
+  const cols='2fr 60px 80px 80px 80px 80px 80px 80px 3px 60px 80px 80px 80px 80px 80px 80px';
   const headers=[
     {label:'Channel',key:null},
     {label:'Videos',key:'vc'},{label:'Views',key:'v'},{label:'Revenue',key:'rev'},
     {label:'Costs',key:null},{label:'Profit',key:null},
     {label:'Watch hrs',key:'wh'},{label:'Subs',key:'subs'},
-    {label:'CTR',key:'ctr'},{label:'Retention',key:'ret'},
     {label:'',key:null},
     {label:'Videos',key:null,ly:true},{label:'Views',key:null,ly:true},{label:'Revenue',key:null,ly:true},
     {label:'Costs',key:null,ly:true},{label:'Profit',key:null,ly:true},
     {label:'Watch hrs',key:null,ly:true},{label:'Subs',key:null,ly:true},
-    {label:'CTR',key:null,ly:true},{label:'Retention',key:null,ly:true},
   ];
-  const CURRENT_COLS=9; // number of data columns in current period (excluding channel + divider)
-  const LY_COLS=7;
 
-  const now=new Date();
-  const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const isSM=S.from===S.to&&S.from!=='';
-  const pLabel=isSM?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
+  const pLabel=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
 
   const sortedChs=[...chs].sort((a,b)=>{
     const aR=mo.filter(r=>r['Channel']===a), bR=mo.filter(r=>r['Channel']===b);
@@ -802,8 +817,6 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
         case 'rev': return agg(rows,'Revenue ($)');
         case 'wh':  return agg(rows,'Watch Hours');
         case 'subs':return agg(rows,'Subscribers');
-        case 'ctr': return avg(rows,'Avg CTR (%)');
-        case 'ret': return avg(rows,'Avg Retention %');
         default:    return agg(rows,'Views');
       }
     };
@@ -820,14 +833,12 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     const v=r.length?agg(r,'Views'):null, wh=r.length?agg(r,'Watch Hours'):null;
     const rev=r.length?agg(r,'Revenue ($)'):null;
     const subs=getVidSubs(ch);
-    const ctr=r.length?avg(r,'Avg CTR (%)'):null, ret=r.length?avg(r,'Avg Retention %'):null;
     const vc2=getVidCount(ch);
     const lyR=getLYRows(ch);
     const ly=(col,rows)=>rows?col(rows):null;
     const lyV=ly(r=>agg(r,'Views'),lyR), lyRev=ly(r=>agg(r,'Revenue ($)'),lyR);
     const lyWH=ly(r=>agg(r,'Watch Hours'),lyR);
     const lySubs=getLYVidSubs(ch);
-    const lyCTR=ly(r=>avg(r,'Avg CTR (%)'),lyR), lyRet=ly(r=>avg(r,'Avg Retention %'),lyR);
     const lyVC=getLYVidCount(ch);
     // LY costs
     const lyCosts=(S.data.costs||[]).reduce((s,r)=>{
@@ -864,8 +875,6 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       rP:  safe(rev, prev.length?agg(prev,'Revenue ($)'):null),
       whP: safe(wh,  prev.length?agg(prev,'Watch Hours'):null),
       sP:  safe(subs,prev.length?agg(prev,'Subscribers'):null),
-      ctrP:safe(ctr, prev.length?avg(prev,'Avg CTR (%)'):null),
-      retP:safe(ret, prev.length?avg(prev,'Avg Retention %'):null),
       vcP: safe(vc2, prev.length?agg(prev,'Video Count'):null),
     };
     const cell=(val,fmt,delta)=>`<div>${val!==null?`<div class="mono-cell">${fmt(val)}</div>${deltaSpanS(delta)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}</div>`;
@@ -881,8 +890,6 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       <div class="mono-cell" style="color:${chProfit!==null&&chProfit>0?'var(--green)':chProfit!==null&&chProfit<0?'var(--red)':'var(--ink)'}">${chProfit!==null?fmtD(chProfit):'—'}</div>
       ${cell(wh,fmtN,yoy.whP)}
       ${cell(subs,fmtN,yoy.sP)}
-      ${cell(ctr,v=>v.toFixed(1)+'%',yoy.ctrP)}
-      ${cell(ret,v=>v.toFixed(1)+'%',yoy.retP)}
       <div style="background:var(--rule);width:1px;height:100%;margin:0 auto"></div>
       ${lyCell(lyVC,v=>Math.round(v).toString())}
       ${lyCell(lyV,fmtN)}
@@ -891,8 +898,6 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
       <div class="mono-cell" style="color:var(--ink3)">${lyProfit!==null?fmtD(lyProfit):'—'}</div>
       ${lyCell(lyWH,fmtN)}
       ${lyCell(lySubs,fmtN)}
-      ${lyCell(lyCTR,v=>v.toFixed(1)+'%')}
-      ${lyCell(lyRet,v=>v.toFixed(1)+'%')}
     </div>`;
   }).join('');
 
@@ -903,9 +908,9 @@ function buildSnapshotTable(chs, mo, lyPeriodLabel){
     <div class="data-table" style="margin-bottom:36px">
       <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
         <div></div>
-        <div style="grid-column:span 9;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
+        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
         <div></div>
-        <div style="grid-column:span 9;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
+        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
       </div>
       <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
         ${headers.map((h,i)=>{
@@ -926,21 +931,17 @@ function renderMeeting(){
   const mo=filterMo(S.data.monthly);
   const allMo=S.data.monthly.filter(r=>chs.includes(r['Channel']));
   const allVids=S.data.videos;
-  const now=new Date();
-  const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const prevMonthName=prevMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const isSingleMonth=S.from===S.to&&S.from!=='';
-  const periodLabel=isSingleMonth?prevMonthName:(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
-  const meetingTitle=isSingleMonth?`${prevMonthName} <em>Review</em>`:`Meeting <em>View</em>`;
+  const periodLabel=isSingleMonth?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
+  const meetingTitle=isSingleMonth?`${monthLabelFromYM(S.from)} <em>Review</em>`:`Meeting <em>View</em>`;
   const chLabel=chs.length===S.data.summary.length?'all channels':`${chs.length} channel${chs.length!==1?'s':''}`;
 
   // ── EXEC STATS ──────────────────────────────────────────────
   const tv=agg(mo,'Views'),twh=agg(mo,'Watch Hours');
   const tr=agg(mo,"Revenue ($)"),ts=chs.reduce((s,ch)=>s+getVidSubs(ch),0);
-  const actr=avg(mo,'Avg CTR (%)'),aret=avg(mo,'Avg Retention %');
   const vc=chs.reduce((s,ch)=>s+getVidCount(ch),0);
 
-  let vP=null,rP=null,sP=null,whP=null,ctrP=null,retP=null,vcP=null,yrLabel='';
+  let vP=null,rP=null,sP=null,whP=null,vcP=null,yrLabel='';
   if(isSingleMonth&&S.from){
     const [fy,fm]=S.from.split('-').map(Number);
     const prev=allMo.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
@@ -950,8 +951,6 @@ function renderMeeting(){
       rP=  safe(tr,  agg(prev,'Revenue ($)'));
       whP= safe(twh, agg(prev,'Watch Hours'));
       sP=  safe(ts,  agg(prev,'Subscribers'));
-      ctrP=safe(actr,avg(prev,'Avg CTR (%)'));
-      retP=safe(aret,avg(prev,'Avg Retention %'));
       vcP= safe(vc,  agg(prev,'Video Count'));
       yrLabel=`${MO[fm-1]} ${fy-1}`;
     }
@@ -959,20 +958,18 @@ function renderMeeting(){
     const years=getYears();const lastTwo=years.slice(-2);
     if(lastTwo.length===2){
       const byYC={};
-      allMo.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC[k])byYC[k]={views:0,rev:0,subs:0,wh:0,ctrSum:0,retSum:0,vc:0,count:0};byYC[k].views+=parseFloat(r['Views'])||0;byYC[k].rev+=parseFloat(r['Revenue ($)'])||0;byYC[k].subs+=parseFloat(r['Subscribers'])||0;byYC[k].wh+=parseFloat(r['Watch Hours'])||0;byYC[k].ctrSum+=parseFloat(r['Avg CTR (%)'])||0;byYC[k].retSum+=parseFloat(r['Avg Retention %'])||0;byYC[k].vc+=parseFloat(r['Video Count'])||0;byYC[k].count++;});
+      allMo.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC[k])byYC[k]={views:0,rev:0,subs:0,wh:0,vc:0,count:0};byYC[k].views+=parseFloat(r['Views'])||0;byYC[k].rev+=parseFloat(r['Revenue ($)'])||0;byYC[k].subs+=parseFloat(r['Subscribers'])||0;byYC[k].wh+=parseFloat(r['Watch Hours'])||0;byYC[k].vc+=parseFloat(r['Video Count'])||0;byYC[k].count++;});
       const t=yr=>({
         views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
         rev:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
         subs: chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
         wh:   chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).wh||0),0),
-        ctr:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).ctrSum||0),0)/Math.max(chs.length,1),
-        ret:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).retSum||0),0)/Math.max(chs.length,1),
         vc:   chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).vc||0),0),
       });
       const [p,c]=[t(lastTwo[0]),t(lastTwo[1])];
       const safe=(a,b)=>b?pct(a,b):null;
       vP=safe(c.views,p.views); rP=safe(c.rev,p.rev); sP=safe(c.subs,p.subs);
-      whP=safe(c.wh,p.wh); ctrP=safe(c.ctr,p.ctr); retP=safe(c.ret,p.ret); vcP=safe(c.vc,p.vc);
+      whP=safe(c.wh,p.wh); vcP=safe(c.vc,p.vc);
       yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
     }
   }
@@ -989,7 +986,7 @@ function renderMeeting(){
 
   let para1=`In ${isSingleMonth?periodLabel:'the selected period'}, across ${chLabel}, the portfolio generated <strong>${fmtN(tv)} views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${Math.round(vc).toLocaleString()} videos.`;
   if(vP!==null&&yrLabel) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> vs. ${yrLabel}, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong>.`;
-  let para2=`Average CTR was <strong>${actr.toFixed(1)}%</strong> with <strong>${aret.toFixed(1)}% retention</strong>. Viewers watched <strong>${fmtN(twh)} hours</strong> of content.`;
+  let para2=`Viewers watched <strong>${fmtN(twh)} hours</strong> of content.`;
   if(ts>0) para2+=` The channels added <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` (${sP>=0?'+':''}${fmtP(sP)} vs. same period last year)`:''}.`;
   let para3='';
   if(bestCh) para3+=`<strong>${bestCh[0]}</strong> led the portfolio this period with <strong>${fmtN(bestCh[1])} views</strong>.`;
@@ -999,8 +996,6 @@ function renderMeeting(){
   const filtVids=filterVids(allVids);
   const topByViews=[...filtVids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,5);
   const topByRev=[...filtVids].sort((a,b)=>(parseFloat(b['Revenue ($)'])||0)-(parseFloat(a['Revenue ($)'])||0)).slice(0,5);
-  const topByCTR=[...filtVids].sort((a,b)=>(parseFloat(b['CTR (%)'])||0)-(parseFloat(a['CTR (%)'])||0)).slice(0,5);
-  const topByRet=[...filtVids].sort((a,b)=>(parseFloat(b['Avg Retention %'])||0)-(parseFloat(a['Avg Retention %'])||0)).slice(0,5);
 
   const years=getYears();const lastTwo=years.slice(-2);
   const byYC2={};
@@ -1021,7 +1016,6 @@ function renderMeeting(){
     const vidRows=filterVids(allVids).filter(r=>r['Channel']===ch).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,10);
     const ctv=agg(moRows,'Views'),ctwh=agg(moRows,'Watch Hours');
     const ctr2=agg(moRows,'Revenue ($)'),cts=getVidSubs(ch);
-    const cactr=avg(moRows,'Avg CTR (%)'),caret=avg(moRows,'Avg Retention %');
     const crpm=ctv>0?(ctr2/(ctv/1000)):0;
 
     // Costs for this channel in this period
@@ -1043,20 +1037,16 @@ function renderMeeting(){
           rP:  safe(ctr2,      agg(prev,'Revenue ($)')),
           whP: safe(ctwh,      agg(prev,'Watch Hours')),
           sP:  safe(cts,       agg(prev,'Subscribers')),
-          ctrP:safe(cactr,     avg(prev,'Avg CTR (%)')),
-          retP:safe(caret,     avg(prev,'Avg Retention %')),
           vcP: safe(agg(moRows,'Video Count'), agg(prev,'Video Count')),
         };
       }
     } else if(lastTwo.length===2){
       const byYr={};allMoRows.forEach(r=>{
-        if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0,wh:0,subs:0,ctrSum:0,retSum:0,vc:0,count:0};
+        if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0,wh:0,subs:0,vc:0,count:0};
         byYr[r['Year']].views+=parseFloat(r['Views'])||0;
         byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;
         byYr[r['Year']].wh+=parseFloat(r['Watch Hours'])||0;
         byYr[r['Year']].subs+=parseFloat(r['Subscribers'])||0;
-        byYr[r['Year']].ctrSum+=parseFloat(r['Avg CTR (%)'])||0;
-        byYr[r['Year']].retSum+=parseFloat(r['Avg Retention %'])||0;
         byYr[r['Year']].vc+=parseFloat(r['Video Count'])||0;
         byYr[r['Year']].count++;
       });
@@ -1069,8 +1059,6 @@ function renderMeeting(){
           rP:  safe(ctr2, p.rev),
           whP: safe(ctwh, p.wh),
           sP:  safe(cts,  p.subs),
-          ctrP:safe(cactr,p.count?p.ctrSum/p.count:0),
-          retP:safe(caret,p.count?p.retSum/p.count:0),
           vcP: safe(agg(moRows,'Video Count'),p.vc),
         };
       }
@@ -1095,8 +1083,6 @@ function renderMeeting(){
           <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</div><div class="stat-sub">${ctr2>0?'margin '+((chProfit/ctr2)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
           <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(ctwh)}</div>${deltaSpan2(cvP?.whP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(cts)}</div>${deltaSpan2(cvP?.sP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${cactr.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>${deltaSpan2(cvP?.ctrP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${caret.toFixed(1)}<span style="font-size:18px;color:var(--ink3)">%</span></div>${deltaSpan2(cvP?.retP)}</div>
           <div class="stat-cell"><div class="stat-eyebrow">Est. RPM</div><div class="stat-num">$${crpm.toFixed(2)}</div><div class="stat-sub">per 1K views</div></div>
         </div>
         ${contentTypeBarHTML(ch)}
@@ -1107,10 +1093,10 @@ function renderMeeting(){
         ${vidRows.length?`
         <div class="section-head"><div class="section-label">Top videos — ${periodLabel}</div><div class="section-line"></div></div>
         <div class="data-table">
-          <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px 65px 70px">
-            <span>Title</span><span>Views</span><span>Watch hrs</span><span>Revenue</span><span>CTR</span><span>Retention</span>
+          <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px">
+            <span>Title</span><span>Views</span><span>Watch hrs</span><span>Revenue</span>
           </div>
-          ${vidRows.map(r=>{const ret=parseFloat(r['Avg Retention %'])||0;const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px 65px 70px"><div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div><div class="mono-cell">${(parseFloat(r['CTR (%)'])||0).toFixed(1)}%</div><div><div class="mono-cell">${ret.toFixed(1)}%</div><div class="ret-track"><div class="ret-fill" style="width:${Math.min(ret*2,100)}%;background:${color}"></div></div></div></div>`;}).join('')}
+          ${vidRows.map(r=>{const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px"><div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div></div>`;}).join('')}
         </div>`:`<div style="font-size:13px;color:var(--ink3);padding:12px 0">No videos published in this period.</div>`}
       </div>`,
       chartData:{vId,cId:null,rId:null,allPeriods,allMoRows,color}
@@ -1136,15 +1122,13 @@ function renderMeeting(){
       prev=allMoRows.filter(r=>+r['Year']===lastTwo[0]);
       label=`${lastTwo[0]}`;
     }
-    if(!prev.length) return {vP:null,rP:null,whP:null,sP:null,ctrP:null,retP:null,vcP:null,label};
+    if(!prev.length) return {vP:null,rP:null,whP:null,sP:null,vcP:null,label};
     const safe=(a,b)=>b?pct(a,b):null;
     return {
       vP:   safe(agg(rows,'Views'),         agg(prev,'Views')),
       rP:   safe(agg(rows,'Revenue ($)'),   agg(prev,'Revenue ($)')),
       whP:  safe(agg(rows,'Watch Hours'),   agg(prev,'Watch Hours')),
       sP:   safe(agg(rows,'Subscribers'),   agg(prev,'Subscribers')),
-      ctrP: safe(avg(rows,'Avg CTR (%)'),   avg(prev,'Avg CTR (%)')),
-      retP: safe(avg(rows,'Avg Retention %'),avg(prev,'Avg Retention %')),
       vcP:  safe(agg(rows,'Video Count'),   agg(prev,'Video Count')),
       label,
     };
@@ -1176,8 +1160,6 @@ function renderMeeting(){
         <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${fmtD(profit)}</div><div class="stat-sub">${tr>0?'margin '+((profit/tr)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div>${stag(whP)}</div>
         <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${stag(sP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Avg CTR</div><div class="stat-num">${actr.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(ctrP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Avg retention</div><div class="stat-num">${aret.toFixed(1)}<span style="font-size:20px;color:var(--ink3)">%</span></div>${stag(retP)}</div>
       </div>`:''}
       ${snapshotHTML}
       <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
@@ -1186,8 +1168,6 @@ function renderMeeting(){
       <div class="hl-grid" style="margin-bottom:36px">
         <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top by views</div><div class="hl-card-sub">Most watched</div></div></div>${topByViews.map((r,i)=>videoItem(r,i,'Views',v=>fmtN(v))).join('')}</div>
         <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fef3c7">💰</div><div><div class="hl-card-title">Top by revenue</div><div class="hl-card-sub">Highest earning</div></div></div>${topByRev.map((r,i)=>videoItem(r,i,'Revenue ($)',v=>fmtD(v))).join('')}</div>
-        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#ede9fe">🎯</div><div><div class="hl-card-title">Top by CTR</div><div class="hl-card-sub">Best click-through</div></div></div>${topByCTR.map((r,i)=>videoItem(r,i,'CTR (%)',v=>v.toFixed(1)+'%')).join('')}</div>
-        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fce7f3">🔒</div><div><div class="hl-card-title">Top by retention</div><div class="hl-card-sub">Best audience hold</div></div></div>${topByRet.map((r,i)=>videoItem(r,i,'Avg Retention %',v=>v.toFixed(1)+'%')).join('')}</div>
         ${bestMonths.length?`<div class="hl-card hl-wide"><div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>${bestMonths.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div><div class="hl-item-val">${fmtN(r.views)} views</div></div>`).join('')}</div>`:''}
       </div>
     </div>`;
