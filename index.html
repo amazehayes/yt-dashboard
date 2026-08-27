@@ -211,6 +211,43 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .sc-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .sc-tag { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
 
+/* TOPBAR NAV */
+.topbar-nav { display: flex; gap: 4px; }
+.topbar-nav-btn {
+  padding: 7px 14px;
+  border-radius: 5px;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.12s;
+  border: none;
+  background: transparent; color: var(--ink3);
+}
+.topbar-nav-btn:hover { color: var(--ink); }
+.topbar-nav-btn.on { background: var(--surface2); color: var(--ink); font-weight: 600; }
+
+/* COMPARE VIEW */
+.cmp-pickers { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.cmp-picker { display: flex; align-items: center; gap: 8px; }
+.cmp-picker select {
+  background: var(--surface2);
+  border: 1px solid var(--rule2);
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  color: var(--ink);
+  outline: none; cursor: pointer;
+}
+.cmp-vs { font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--ink3); }
+.cmp-row { display: grid; grid-template-columns: 1fr 100px 1fr; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--rule); gap: 16px; }
+.cmp-row:last-child { border-bottom: none; }
+.cmp-metric-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.1em; text-align: center; }
+.cmp-val { font-family: var(--serif); font-size: 26px; }
+.cmp-val.a { text-align: right; }
+.cmp-val.b { text-align: left; }
+.cmp-bar-track { height: 6px; border-radius: 3px; background: var(--rule); margin-top: 8px; overflow: hidden; display: flex; }
+.cmp-bar-track.a { justify-content: flex-end; }
+.cmp-bar-fill { height: 100%; }
+.cmp-ct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
 /* CONTENT TYPE BAR */
 .ct-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface2); margin-bottom: 14px; }
 .ct-bar-seg { height: 100%; transition: width 0.6s ease; }
@@ -270,6 +307,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
       <span class="topbar-sup">Betsperts Media</span>
       <span class="topbar-name">YouTube <em>Data Dashboard</em></span>
     </div>
+    <div class="topbar-nav" id="topbarNav"><!-- populated after data loads --></div>
     <div class="topbar-filters" id="topbarFilters"><!-- populated after data loads --></div>
     <div class="topbar-actions">
       <span class="topbar-sync" id="lastSync">Not synced</span>
@@ -289,7 +327,11 @@ const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a','#7c3aed'];
 
-let S = { channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null, snapSort:'v', snapDir:-1 };
+let S = { channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null, snapSort:'v', snapDir:-1, view:'dashboard' };
+// Compare view has its own channel picks + date range — deliberately
+// separate from S so switching views never disturbs the main dashboard's
+// filter state (and vice versa).
+let CMP = { chA:'', chB:'', from:'', to:'' };
 let CH = {};
 
 (function init() {
@@ -638,15 +680,25 @@ function normalizeContentType(v){
   if(s.includes('video')) return 'video';
   return 'other';
 }
-function getContentTypeMix(ch){
-  const noFilter = !S.from && !S.to;
+// Parameterized version used by both the main dashboard (via S.from/S.to)
+// and the Compare page (via its own independent CMP.from/CMP.to) — no
+// shared global-state coupling, so the two views can never step on
+// each other's filters.
+function inRangeExplicit(from, to, yr, mo){
+  if(!from||!to) return true;
+  const [fy,fm]=from.split('-').map(Number);
+  const [ty,tm]=to.split('-').map(Number);
+  return (yr>fy||(yr===fy&&mo>=fm)) && (yr<ty||(yr===ty&&mo<=tm));
+}
+function contentTypeMixForRange(ch, from, to){
+  const noFilter = !from && !to;
   const rows=(S.data?.contentType||[]).filter(r=>{
     if(r['Channel']!==ch) return false;
     if(noFilter) return true;
     const p=r['Period'];
     if(!/^\d{4}-\d{2}$/.test(p)) return false; // e.g. "Lifetime" — can't be date-filtered
     const [yr,mo]=p.split('-').map(Number);
-    return inRange(yr,mo);
+    return inRangeExplicit(from,to,yr,mo);
   });
   const mix={live:0,shorts:0,video:0,other:0};
   let total=0;
@@ -657,11 +709,10 @@ function getContentTypeMix(ch){
   });
   return {mix,total};
 }
-function contentTypeBarHTML(ch){
-  const {mix,total}=getContentTypeMix(ch);
+function getContentTypeMix(ch){ return contentTypeMixForRange(ch, S.from, S.to); }
+
+function renderContentTypeBarHTML(mix, total, label){
   if(!total) return '';
-  const isSM=S.from===S.to&&S.from!=='';
-  const label=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'all-time');
   const segs=['live','shorts','video','other'].filter(k=>mix[k]>0);
   return `<div class="chart-card" style="margin-bottom:16px">
     <div class="card-top"><div class="card-label">Content type mix — ${label} views</div></div>
@@ -669,6 +720,117 @@ function contentTypeBarHTML(ch){
     <div class="ct-legend">${segs.map(k=>`<span class="ct-legend-item"><span class="leg-dot" style="background:${CT_COLORS[k]}"></span><span class="leg-txt">${CT_LABELS[k]} · ${(mix[k]/total*100).toFixed(1)}% · ${fmtN(mix[k])}</span></span>`).join('')}</div>
   </div>`;
 }
+function contentTypeBarHTML(ch){
+  const {mix,total}=getContentTypeMix(ch);
+  const isSM=S.from===S.to&&S.from!=='';
+  const label=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'all-time');
+  return renderContentTypeBarHTML(mix,total,label);
+}
+// All-metrics rollup for one channel over an explicit [from,to] range —
+// mirrors what filterMo()/getVidCount()/getVidSubs() already do for the
+// main dashboard, just parameterized instead of reading global S.from/
+// S.to, so the Compare page's independent date range never touches them.
+function channelMetricsForRange(ch, from, to){
+  const moRows = (S.data?.monthly||[]).filter(r=>r['Channel']===ch && inRangeExplicit(from,to,+r['Year'],+r['Month']));
+  const vidRows = (S.data?.videos||[]).filter(r=>{
+    if(r['Channel']!==ch) return false;
+    const pub=r['Published At']?new Date(r['Published At']):null;
+    if(!pub||isNaN(pub)) return false;
+    return inRangeExplicit(from,to,pub.getFullYear(),pub.getMonth()+1);
+  });
+  return {
+    views: agg(moRows,'Views'),
+    watchHours: agg(moRows,'Watch Hours'),
+    revenue: agg(moRows,'Revenue ($)'),
+    videoCount: vidRows.length,
+    subs: vidRows.reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0),
+  };
+}
+
+// ── COMPARE VIEW ─────────────────────────────────────────────
+function renderCompare(){
+  if(!CMP.chA) CMP.chA = S.data.summary[0]?.['Channel'] || '';
+  if(!CMP.chB) CMP.chB = S.data.summary[1]?.['Channel'] || S.data.summary[0]?.['Channel'] || '';
+
+  const channelOptions = S.data.summary.map(r=>r['Channel']).filter(Boolean);
+  const years=getYears();
+  const isSM = CMP.from===CMP.to && CMP.from!=='';
+  const cmpLabel = isSM?monthLabelFromYM(CMP.from):(CMP.from&&CMP.to?`${CMP.from} — ${CMP.to}`:'All time');
+
+  const a = channelMetricsForRange(CMP.chA, CMP.from, CMP.to);
+  const b = channelMetricsForRange(CMP.chB, CMP.from, CMP.to);
+  const colorA = chColor(CMP.chA), colorB = chColor(CMP.chB);
+
+  const metricRow = (label, valA, valB, fmt) => {
+    const numA = valA||0, numB = valB||0;
+    const maxV = Math.max(numA, numB, 1);
+    return `<div class="cmp-row">
+      <div>
+        <div class="cmp-val a" style="color:${colorA}">${fmt(numA)}</div>
+        <div class="cmp-bar-track a"><div class="cmp-bar-fill" style="width:${(numA/maxV*100).toFixed(1)}%;background:${colorA}"></div></div>
+      </div>
+      <div class="cmp-metric-label">${label}</div>
+      <div>
+        <div class="cmp-val b" style="color:${colorB}">${fmt(numB)}</div>
+        <div class="cmp-bar-track"><div class="cmp-bar-fill" style="width:${(numB/maxV*100).toFixed(1)}%;background:${colorB}"></div></div>
+      </div>
+    </div>`;
+  };
+
+  const ctA = contentTypeMixForRange(CMP.chA, CMP.from, CMP.to);
+  const ctB = contentTypeMixForRange(CMP.chB, CMP.from, CMP.to);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="content fade">
+      <div class="cmp-pickers">
+        <div class="cmp-picker">
+          <select onchange="CMP.chA=this.value;renderPage()">
+            ${channelOptions.map(ch=>`<option value="${ch}" ${ch===CMP.chA?'selected':''}>${ch}</option>`).join('')}
+          </select>
+        </div>
+        <span class="cmp-vs">vs</span>
+        <div class="cmp-picker">
+          <select onchange="CMP.chB=this.value;renderPage()">
+            ${channelOptions.map(ch=>`<option value="${ch}" ${ch===CMP.chB?'selected':''}>${ch}</option>`).join('')}
+          </select>
+        </div>
+        <span class="filter-sep" style="margin-left:8px">·</span>
+        <span class="filter-label">From</span>
+        <input class="month-input" type="month" value="${CMP.from}" onchange="CMP.from=this.value;renderPage()">
+        <span class="filter-sep">→</span>
+        <input class="month-input" type="month" value="${CMP.to}" onchange="CMP.to=this.value;renderPage()">
+        <button class="yr-chip" onclick="CMP.from='';CMP.to='';renderPage()">All</button>
+        ${years.map(yr=>`<button class="yr-chip${CMP.from===yr+'-01'&&CMP.to===yr+'-12'?' on':''}" onclick="CMP.from='${yr}-01';CMP.to='${yr}-12';renderPage()">${yr}</button>`).join('')}
+      </div>
+
+      <div class="section-head"><div class="section-label">Head-to-head — ${cmpLabel}</div><div class="section-line"></div></div>
+      <div class="data-table" style="margin-bottom:32px">
+        <div class="cmp-row" style="padding:14px 24px;background:var(--surface2)">
+          <div class="dt-name" style="color:${colorA};text-align:right">${CMP.chA||'—'}</div>
+          <div></div>
+          <div class="dt-name" style="color:${colorB}">${CMP.chB||'—'}</div>
+        </div>
+        ${metricRow('Videos published', a.videoCount, b.videoCount, v=>Math.round(v).toString())}
+        ${metricRow('Views', a.views, b.views, fmtN)}
+        ${metricRow('Revenue', a.revenue, b.revenue, fmtD)}
+        ${metricRow('Watch hours', a.watchHours, b.watchHours, fmtN)}
+        ${metricRow('Subs gained', a.subs, b.subs, fmtN)}
+      </div>
+
+      <div class="section-head"><div class="section-label">Content type mix — ${cmpLabel}</div><div class="section-line"></div></div>
+      <div class="cmp-ct-grid" style="margin-bottom:32px">
+        <div>
+          <div style="font-weight:700;font-size:14px;color:${colorA};margin-bottom:10px">${CMP.chA||'—'}</div>
+          ${ctA.total?renderContentTypeBarHTML(ctA.mix,ctA.total,cmpLabel):`<div class="chart-card"><div style="font-size:13px;color:var(--ink3)">No content-type data for this period.</div></div>`}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:${colorB};margin-bottom:10px">${CMP.chB||'—'}</div>
+          ${ctB.total?renderContentTypeBarHTML(ctB.mix,ctB.total,cmpLabel):`<div class="chart-card"><div style="font-size:13px;color:var(--ink3)">No content-type data for this period.</div></div>`}
+        </div>
+      </div>
+    </div>`;
+}
+
 function getYears(){return[...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].map(Number).sort();}
 function sortPeriods(ps){
   return[...ps].sort((a,b)=>{
@@ -769,6 +931,11 @@ function chartDefaults(yFmt,extra={}){
 }
 
 function buildTopbarFilters(){
+  document.getElementById('topbarNav').innerHTML=`
+    <button class="topbar-nav-btn${S.view==='dashboard'?' on':''}" onclick="switchView('dashboard')">Dashboard</button>
+    <button class="topbar-nav-btn${S.view==='compare'?' on':''}" onclick="switchView('compare')">Compare</button>
+  `;
+  if(S.view!=='dashboard'){ document.getElementById('topbarFilters').innerHTML=''; return; }
   const years=getYears();
   document.getElementById('topbarFilters').innerHTML=`
     <span class="filter-label">From</span>
@@ -784,11 +951,14 @@ function buildTopbarFilters(){
   `;
 }
 
+function switchView(v){ S.view=v; renderPage(); }
+
 function renderPage(){
   if(!S.data) return;
   destroyCharts();
   buildTopbarFilters();
-  renderMeeting();
+  if(S.view==='compare') renderCompare();
+  else renderMeeting();
 }
 
 function buildSnapshotTable(chs, mo, lyPeriodLabel){
