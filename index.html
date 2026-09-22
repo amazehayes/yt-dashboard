@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Betsperts Media · YouTube Data Dashboard</title>
+<title>Betsperts Media · A/V Data Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Epilogue:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -17,7 +17,10 @@
   --rule2: #d0cec7;
   --surface: #ffffff;
   --surface2: #f0ede8;
-  --accent: #1a1a2e;
+  --sidebar: #141413;
+  --sidebar2: #1e1e1c;
+  --sidebar-rule: rgba(255,255,255,0.1);
+  --sidebar-ink3: #8f8f8b;
   --green: #1a6645;
   --green-bg: #e8f5ee;
   --red: #b91c1c;
@@ -32,76 +35,67 @@
 html { font-size: 16px; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
 
-/* LAYOUT */
-.shell { display: block; min-height: 100vh; }
+/* APP SHELL — sidebar + independently-scrolling main pane, both 100vh */
+.app-shell { display: flex; height: 100vh; overflow: hidden; }
 
-/* TOP BAR */
-.topbar {
-  background: var(--white);
-  border-bottom: 1px solid var(--rule);
-  padding: 14px 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* SIDEBAR */
+.sidebar {
+  width: 268px; flex-shrink: 0; height: 100vh; overflow-y: auto;
+  background: var(--sidebar); color: #fff;
+  padding: 26px 18px 18px; display: flex; flex-direction: column; gap: 26px;
 }
-.topbar-brand { display: flex; align-items: baseline; gap: 10px; }
-.topbar-sup { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.15em; text-transform: uppercase; }
-.topbar-name { font-family: var(--serif); font-size: 20px; color: var(--ink); }
-.topbar-name em { font-style: italic; color: var(--ink3); }
-.topbar-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
-.topbar-sync { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-right: 4px; }
-.topbar-btn {
-  padding: 7px 14px;
-  border-radius: 5px;
-  font-family: var(--sans); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: opacity 0.15s;
-  border: 1px solid var(--rule2);
-  background: transparent; color: var(--ink3);
+.sidebar-brand-mark { font-family: var(--serif); font-size: 25px; color: #fff; line-height: 1; padding: 0 6px; }
+.sidebar-brand-mark em { font-style: italic; color: var(--sidebar-ink3); }
+.sidebar-sup { font-family: var(--mono); font-size: 10px; color: var(--sidebar-ink3); letter-spacing: 0.15em; text-transform: uppercase; padding: 0 6px; margin-top: 5px; }
+.sidebar-section-label { font-family: var(--mono); font-size: 10px; color: var(--sidebar-ink3); letter-spacing: 0.14em; text-transform: uppercase; padding: 0 10px 8px; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px;
+  border-radius: 6px; cursor: pointer; transition: background 0.1s;
+  font-family: var(--sans); font-size: 14px; font-weight: 500; color: #c9c9c6;
 }
-.topbar-btn:hover { color: var(--ink); border-color: var(--ink2); }
-.topbar-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-.topbar-btn.primary:hover { opacity: 0.8; }
-.topbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.sidebar-row:hover { background: rgba(255,255,255,0.06); }
+.sidebar-row.on { background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-row-icon { width: 16px; flex-shrink: 0; text-align: center; opacity: 0.8; }
+.sidebar-brands { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; overflow-y: auto; }
+.sidebar-brand-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; cursor: pointer; transition: background 0.1s; }
+.sidebar-brand-row:hover { background: rgba(255,255,255,0.06); }
+.sidebar-brand-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-brand-name { font-size: 14px; font-weight: 500; flex-grow: 1; }
+.sidebar-brand-metric { font-family: var(--mono); font-size: 11px; color: var(--sidebar-ink3); }
+.sidebar-footer { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--sidebar-rule); padding-top: 16px; }
+.sidebar-select {
+  width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 6px; padding: 9px 12px; font-family: var(--mono); font-size: 12px;
+  color: #fff; outline: none; cursor: pointer; appearance: none;
+}
+.sidebar-select option { color: #111; }
+.sidebar-custom-row { display: flex; align-items: center; gap: 6px; }
+.sidebar-month-input {
+  flex: 1; min-width: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 6px; padding: 7px 8px; font-family: var(--mono); font-size: 11px; color: #fff; outline: none;
+}
+.sidebar-util { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sidebar-sync { font-family: var(--mono); font-size: 10px; color: var(--sidebar-ink3); }
+.sidebar-btn {
+  padding: 6px 10px; border-radius: 5px; font-family: var(--sans); font-size: 12px; font-weight: 500;
+  cursor: pointer; border: 1px solid rgba(255,255,255,0.16); background: transparent; color: #c9c9c6;
+  transition: all 0.1s;
+}
+.sidebar-btn:hover { color: #fff; border-color: rgba(255,255,255,0.35); }
+.sidebar-btn.primary { background: #fff; color: #141413; border-color: #fff; }
+.sidebar-btn.primary:hover { opacity: 0.85; }
+.sidebar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* MAIN */
-.main { min-width: 0; }
+/* MAIN PANE */
+.main-pane { flex-grow: 1; min-width: 0; height: 100vh; overflow-y: auto; background: var(--bg); }
+.content { padding: 44px 52px 60px; }
 
-/* FILTER */
-.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filter-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); }
-.month-input {
-  background: var(--surface2);
-  border: 1px solid var(--rule2);
-  border-radius: 5px;
-  padding: 7px 10px;
-  font-family: var(--mono); font-size: 13px;
-  color: var(--ink);
-  outline: none;
-  cursor: pointer;
-}
-.month-input:focus { border-color: var(--ink2); }
-.filter-sep { color: var(--ink3); font-size: 13px; }
-.yr-chip {
-  padding: 6px 13px;
-  border-radius: 4px;
-  font-family: var(--mono); font-size: 12px;
-  border: 1px solid var(--rule2);
-  background: transparent;
-  color: var(--ink3);
-  cursor: pointer; transition: all 0.1s;
-}
-.yr-chip:hover { border-color: var(--ink); color: var(--ink); }
-.yr-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-
-/* CONTENT */
-.content { padding: 36px 44px; }
+/* FILTER (custom-range inputs, reused inside sidebar footer) */
+.filter-sep { color: var(--sidebar-ink3); font-size: 12px; }
 
 /* STAT ROW */
-.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 32px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 28px; }
 .stat-cell { padding: 26px 24px 22px; border-right: 1px solid var(--rule); }
 .stat-cell:last-child { border-right: none; }
 .stat-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
@@ -110,14 +104,11 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .up-tag { color: var(--green); font-family: var(--mono); font-size: 12px; background: var(--green-bg); padding: 2px 7px; border-radius: 3px; font-weight: 600; }
 .dn-tag { color: var(--red); font-family: var(--mono); font-size: 12px; background: var(--red-bg); padding: 2px 7px; border-radius: 3px; font-weight: 600; }
 
-/* CHART GRID */
-.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 32px; }
+/* CHART CARD */
 .chart-card { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 26px 28px; }
 .chart-card.wide { grid-column: span 2; }
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
 .card-label { font-family: var(--mono); font-size: 12px; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; }
-.card-hero { font-family: var(--serif); font-size: 32px; color: var(--ink); margin-top: 6px; }
-.card-leg { display: flex; gap: 16px; flex-wrap: wrap; }
 .leg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
 .leg-txt { font-family: var(--mono); font-size: 11px; color: var(--ink3); }
 
@@ -129,42 +120,13 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 /* TABLE */
 .data-table { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 32px; }
 .dt-head { display: grid; padding: 14px 24px; border-bottom: 1px solid var(--rule); background: var(--surface2); gap: 8px; }
-.dt-head span { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; }
+.dt-head span { font-family: var(--mono); font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-row { display: grid; padding: 15px 24px; border-bottom: 1px solid var(--rule); gap: 8px; align-items: center; transition: background 0.08s; }
 .dt-row:last-child { border-bottom: none; }
 .dt-row:hover { background: var(--surface2); }
 .dt-name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-sub { font-size: 13px; color: var(--ink3); margin-top: 2px; }
 .mono-cell { font-family: var(--mono); font-size: 13px; color: var(--ink2); }
-.ret-track { height: 4px; border-radius: 2px; background: var(--rule); margin-top: 5px; }
-.ret-fill { height: 100%; border-radius: 2px; }
-.delta-up { font-family: var(--mono); font-size: 12px; color: var(--green); font-weight: 600; }
-.delta-dn { font-family: var(--mono); font-size: 12px; color: var(--red); font-weight: 600; }
-
-/* CHANNEL FILTER */
-.ch-filter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
-.ch-filter-label { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.12em; text-transform: uppercase; margin-right: 4px; white-space: nowrap; }
-.ch-pill {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 14px;
-  border-radius: 100px;
-  border: 1.5px solid var(--rule2);
-  background: var(--white);
-  font-family: var(--sans); font-size: 13px; font-weight: 500;
-  color: var(--ink3);
-  cursor: pointer; transition: all 0.12s;
-  white-space: nowrap;
-}
-.ch-pill:hover { border-color: var(--ink2); color: var(--ink); }
-.ch-pill.on { color: var(--white); border-color: transparent; }
-.ch-pill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ch-pill-all { font-family: var(--mono); font-size: 12px; }
-
-/* EXEC SUMMARY */
-.exec-summary { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 36px 40px; margin-bottom: 28px; }
-.exec-summary p { font-family: var(--serif); font-size: 22px; line-height: 1.7; color: var(--ink); }
-.exec-summary p em { font-style: italic; }
-.exec-meta { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--rule); }
 
 /* HIGHLIGHT REEL */
 .hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
@@ -180,49 +142,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .hl-item-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hl-item-ch { font-family: var(--mono); font-size: 10px; color: var(--ink3); margin-top: 2px; }
 .hl-item-val { font-family: var(--mono); font-size: 14px; font-weight: 600; flex-shrink: 0; text-align: right; }
-.hl-delta { font-family: var(--mono); font-size: 11px; margin-top: 2px; text-align: right; }
 .hl-wide { grid-column: span 2; }
-
-/* DEEP DIVE */
-.dd-pick { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
-.dd-pick-btn { padding: 8px 18px; border-radius: 100px; border: 1.5px solid var(--rule2); background: var(--white); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.12s; display: flex; align-items: center; gap: 8px; }
-.dd-pick-btn:hover { border-color: var(--ink2); }
-.dd-pick-btn.on { color: #fff; border-color: transparent; }
-.dd-stat-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 28px; }
-
-/* CHANNEL FILTER */
-.scorecard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
-.scorecard {
-  background: var(--white);
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.sc-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 13px; }
-.sc-pip { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
-.sc-name { font-weight: 700; font-size: 15px; line-height: 1.2; }
-.sc-sub { font-family: var(--mono); font-size: 11px; color: var(--ink3); margin-top: 3px; }
-.sc-body { padding: 16px 22px; }
-.sc-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-.sc-metric-val { font-family: var(--serif); font-size: 26px; line-height: 1; }
-.sc-metric-lbl { font-family: var(--mono); font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
-.sc-bar { height: 3px; background: var(--rule); border-radius: 2px; margin-top: 16px; overflow: hidden; }
-.sc-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
-.sc-tags { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
-.sc-tag { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
-
-/* TOPBAR NAV */
-.topbar-nav { display: flex; gap: 4px; }
-.topbar-nav-btn {
-  padding: 7px 14px;
-  border-radius: 5px;
-  font-family: var(--sans); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all 0.12s;
-  border: none;
-  background: transparent; color: var(--ink3);
-}
-.topbar-nav-btn:hover { color: var(--ink); }
-.topbar-nav-btn.on { background: var(--surface2); color: var(--ink); font-weight: 600; }
 
 /* COMPARE VIEW */
 .cmp-side-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -234,6 +154,16 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
   font-family: var(--sans); font-size: 14px; font-weight: 600;
   outline: none; cursor: pointer;
   min-width: 200px;
+}
+.month-input {
+  background: var(--surface2);
+  border: 1px solid var(--rule2);
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-family: var(--mono); font-size: 13px;
+  color: var(--ink);
+  outline: none;
+  cursor: pointer;
 }
 .cmp-vs-divider { display: flex; align-items: center; margin: 2px 0 10px; }
 .cmp-vs { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink3); }
@@ -253,6 +183,9 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .ct-bar-seg { height: 100%; transition: width 0.6s ease; }
 .ct-legend { display: flex; gap: 18px; flex-wrap: wrap; }
 .ct-legend-item { display: flex; align-items: center; }
+
+/* Brand page's Channels & Shows table — the "kind" (YT/POD) badge */
+.item-kind { font-family: var(--mono); font-size: 8px; color: #fff; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
 
 /* MODAL */
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
@@ -281,6 +214,12 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .sort-hd.active .sort-arrow { opacity:1; color:var(--ink2); }
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 .fade { animation: fadeIn 0.3s ease forwards; }
+
+@media (max-width: 900px) {
+  .app-shell { flex-direction: column; height: auto; overflow: visible; }
+  .sidebar { width: 100%; height: auto; }
+  .main-pane { height: auto; overflow: visible; }
+}
 </style>
 </head>
 <body>
@@ -288,7 +227,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 <div class="modal-bg" id="setupModal">
   <div class="modal">
     <div class="modal-title">Connect your Sheet</div>
-    <div class="modal-sub">Enter your Google Sheet ID and API key to load live channel analytics.</div>
+    <div class="modal-sub">Enter your Google Sheet ID and API key to load live analytics.</div>
     <div class="modal-note">Get a free API key at <code>console.cloud.google.com</code> → APIs & Services → Credentials. Enable <code>Google Sheets API</code> and share your Sheet as "Anyone with link → Viewer".</div>
     <label>Sheet ID</label>
     <input id="sheetIdInput" type="text" placeholder="13YtFan9EmzAnh..." />
@@ -301,38 +240,76 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
   </div>
 </div>
 
-<div class="shell">
-  <div class="topbar">
-    <div class="topbar-brand">
-      <span class="topbar-sup">Betsperts Media</span>
-      <span class="topbar-name">YouTube <em>Data Dashboard</em></span>
+<div class="app-shell">
+  <nav class="sidebar" id="sidebar">
+    <div>
+      <div class="sidebar-brand-mark">A/V <em>Dashboard</em></div>
+      <div class="sidebar-sup">Betsperts Media</div>
     </div>
-    <div class="topbar-nav" id="topbarNav"><!-- populated after data loads --></div>
-    <div class="topbar-filters" id="topbarFilters"><!-- populated after data loads --></div>
-    <div class="topbar-actions">
-      <span class="topbar-sync" id="lastSync">Not synced</span>
-      <button class="topbar-btn" onclick="document.getElementById('setupModal').style.display='flex'">Settings</button>
-      <button class="topbar-btn primary" id="syncBtn" onclick="loadData()">Refresh data</button>
-    </div>
-  </div>
-
-  <main class="main" id="mainContent">
+  </nav>
+  <main class="main-pane" id="mainContent">
     <div class="state-box"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>
   </main>
 </div>
 
 <script>
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
-const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type', apiMonthly:'API - Monthly', apiVideos:'API - Video Performance' };
+const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type', apiMonthly:'API - Monthly', apiVideos:'API - Video Performance', pcShows:'Podcast - Shows', pcMonthly:'Podcast - Monthly', pcEpisodes:'Podcast - Episodes' };
+// Defunct/unwanted entities that still linger in the underlying Sheet tabs
+// (legacy rows, not currently-maintained data) — filtered out at load time
+// so they never surface as selectable rows anywhere in the app.
+const EXCLUDED_CHANNELS = ['4for4 Shorts']; // replaced by Move The Line
+const EXCLUDED_PODCASTS = ['Dynasty Game Night', 'Dynasty Crossroads'];
+// Old history (pre-2020) is cut off entirely — dropped at load time, not
+// just hidden by the date filter, so it never shows up anywhere (full-
+// history charts, "All time" totals, the filter's year list, etc.).
+const DATA_MIN_YEAR = 2020;
 const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PAL = ['#2563eb','#dc2626','#db2777','#ea580c','#111111','#16a34a','#7c3aed'];
 
-let S = { channels:[], from:'', to:'', apiKey:'', sheetId:SHEET_ID, data:null, snapSort:'v', snapDir:-1, view:'dashboard' };
+// Brand map — the organizing unit for the whole app. Betsperts Media runs
+// 5 brands; each owns one or more YouTube channels AND one or more
+// Simplecast podcasts. Every brand gets one color, shared by its YouTube
+// deep dives, its podcast deep dives, its sidebar row and its Home card —
+// that shared color is what visually ties "same brand, different show"
+// together.
+const BRANDS = [
+  { name:'DLF', color:'#2563eb',
+    channels:['Dynasty League Football'],
+    podcasts:['DLF Dynasty Podcast | Dynasty Fantasy Football','The SuperFlex SuperShow | Dynasty Fantasy Football','DLF on Demand','The Devy Devotional'] },
+  { name:'4for4', color:'#dc2626',
+    channels:['4for4 Fantasy Football','4for4 Live!','Move The Line'],
+    podcasts:['The Most Accurate Podcast','DFS MVP','Move The Line'] },
+  { name:'Bleacher Nation', color:'#ea580c',
+    channels:['Bleacher Nation'],
+    podcasts:['The Bleacher Nation Bears Podcast','The Bleacher Nation Cubs Podcast'] },
+  { name:'Deep Dive', color:'#16a34a',
+    channels:['Deep Dive Podcast'],
+    podcasts:['Deep Dive Gambling Podcast'] },
+  { name:'Betsperts Golf', color:'#7c3aed',
+    channels:['Betsperts Golf'],
+    podcasts:['Betsperts Golf Betting and DFS Preview'] },
+];
+// Populated in loadData() as BRANDS plus a synthetic "Other" bucket for
+// any channel/podcast that shows up in the Sheet but isn't mapped above
+// (a new channel or show added later) — so new data surfaces instead of
+// silently vanishing, the same failure mode that let a defunct "4for4
+// Shorts" channel linger invisibly until someone noticed.
+let EFF_BRANDS = [];
+
+// S.view: 'home' (all-brands overview) | 'brand' (one brand's full page,
+// S.brands holds exactly that one name) | 'compare' (channel vs channel).
+// S.channels/S.podcasts are always DERIVED from S.brands (never toggled
+// directly) so every per-channel/per-podcast calc function keeps working
+// unchanged regardless of which view is driving the selection.
+let S = { view:'home', brands:[], channels:[], podcasts:[], expandedItem:null, from:'', to:'', customMode:false, apiKey:'', sheetId:SHEET_ID, data:null };
 // Compare view has its own channel picks + date range — deliberately
-// separate from S so switching views never disturbs the main dashboard's
-// filter state (and vice versa).
-let CMP = { chA:'', chB:'', fromA:'', toA:'', fromB:'', toB:'' }; // independent date range per side
+// separate from S so switching views never disturbs Home/Brand filter
+// state (and vice versa). YouTube-only (channel vs. channel); brands
+// aren't a unit of comparison here.
+let CMP = { chA:'', chB:'', fromA:'', toA:'', fromB:'', toB:'', customModeA:false, customModeB:false }; // independent date range per side
 let CH = {};
+let PCCOL = {};
 
 (function init() {
   const k=localStorage.getItem('yt_api_key'), id=localStorage.getItem('yt_sheet_id');
@@ -355,20 +332,45 @@ async function loadData(){
   if(!S.apiKey){document.getElementById('setupModal').style.display='flex';return;}
   setSyncing(true);setLoading();
   try{
-    const [summaryRaw,monthlyOld,pervideo,videosOld,costs,contentType,apiMonthly,apiVideos]=await Promise.all([
+    const [summaryRaw,monthlyOld,pervideo,videosOld,costs,contentType,apiMonthly,apiVideos,pcShows,pcMonthly,pcEpisodes]=await Promise.all([
       fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos),
       fetchTab(TABS.costs).catch(()=>[]),
       fetchTab(TABS.contentType).catch(()=>[]),
       fetchTab(TABS.apiMonthly).catch(()=>[]),
       fetchTab(TABS.apiVideos).catch(()=>[]),
+      fetchTab(TABS.pcShows).catch(()=>[]),
+      fetchTab(TABS.pcMonthly).catch(()=>[]),
+      fetchTab(TABS.pcEpisodes).catch(()=>[]),
     ]);
+    // Drop excluded channels/podcasts here, before anything downstream
+    // (merges, color maps, default selections) ever sees them.
+    [summaryRaw, monthlyOld, videosOld].forEach(arr=>{
+      for(let i=arr.length-1;i>=0;i--) if(EXCLUDED_CHANNELS.includes(arr[i]['Channel'])) arr.splice(i,1);
+    });
+    [pcShows, pcMonthly, pcEpisodes].forEach(arr=>{
+      for(let i=arr.length-1;i>=0;i--) if(EXCLUDED_PODCASTS.includes(arr[i]['Podcast'])) arr.splice(i,1);
+    });
     // Merge: for the 6 API-covered channels, API data fully replaces the old
     // Chrome-pipeline data (superset — full history, no 500-row cap, current
     // partial month included). Betsperts Golf has no API monthly/video data
     // at all (manager-only access, can't authenticate as that channel via
     // OAuth) so it falls back to the original tabs entirely, unchanged.
-    const videos=buildMergedVideos(videosOld,apiVideos);
-    const monthly=buildMergedMonthly(monthlyOld,apiMonthly,videos);
+    const videosAll=buildMergedVideos(videosOld,apiVideos);
+    const monthlyAll=buildMergedMonthly(monthlyOld,apiMonthly,videosAll);
+    // Cut off everything before DATA_MIN_YEAR — old history no longer
+    // relevant. A row with no parseable date is kept (same "unparseable →
+    // don't drop it" convention filterVids() already uses elsewhere),
+    // only a genuinely-pre-cutoff date gets dropped.
+    const monthly=monthlyAll.filter(r=>+r['Year']>=DATA_MIN_YEAR);
+    const videos=videosAll.filter(r=>{
+      const pub=r['Published At']?new Date(r['Published At']):null;
+      return !pub||isNaN(pub)||pub.getFullYear()>=DATA_MIN_YEAR;
+    });
+    const pcMonthlyCut=pcMonthly.filter(r=>{ const yr=+((r['Month']||'').split('-')[0]); return !yr||yr>=DATA_MIN_YEAR; });
+    const pcEpisodesCut=pcEpisodes.filter(r=>{
+      const pub=r['Published At']?new Date(r['Published At']):null;
+      return !pub||isNaN(pub)||pub.getFullYear()>=DATA_MIN_YEAR;
+    });
     // Ensure every channel with real data (old OR new) appears in the
     // filterable channel list — "Channel Summary" predates Move The Line
     // and would never surface it on its own.
@@ -377,28 +379,38 @@ async function loadData(){
     new Set([...apiMonthly.map(r=>r['Channel']),...apiVideos.map(r=>r['Channel'])]).forEach(ch=>{
       if(ch && !knownChannels.has(ch)){ summary.push({Channel:ch}); knownChannels.add(ch); }
     });
-    S.data={summary,monthly,pervideo,videos,costs,contentType};
-    // Explicit channel color + order map
-    const CH_ORDER = [
-      'Dynasty League Football',
-      '4for4 Fantasy Football',
-      '4for4 Live!',
-      'Bleacher Nation',
-      'Deep Dive Podcast',
-      'Betsperts Golf',
-      'Move The Line',
-    ];
-    CH_ORDER.forEach((name, i) => { CH[name] = PAL[i]; });
-    // Fallback for any channel not in the list
-    summary.forEach((r, i) => { if (!CH[r['Channel']]) CH[r['Channel']] = PAL[i % PAL.length]; });
-    // Sort summary rows to match desired order
+    S.data={summary,monthly,pervideo,videos,costs,contentType,pcShows,pcMonthly:pcMonthlyCut,pcEpisodes:pcEpisodesCut};
+    // Build the effective brand list: BRANDS plus a catch-all "Other" for
+    // anything unmapped, so a future new channel/show is never silently
+    // invisible (see the note above BRANDS).
+    const mappedChannels=new Set(BRANDS.flatMap(b=>b.channels));
+    const mappedPodcasts=new Set(BRANDS.flatMap(b=>b.podcasts));
+    const otherChannels=[...new Set(summary.map(r=>r['Channel']).filter(c=>c&&!mappedChannels.has(c)))];
+    const otherPodcasts=[...new Set(pcShows.map(r=>r['Podcast']).filter(p=>p&&!mappedPodcasts.has(p)))];
+    EFF_BRANDS=[...BRANDS];
+    if(otherChannels.length||otherPodcasts.length) EFF_BRANDS.push({name:'Other',color:'#888888',channels:otherChannels,podcasts:otherPodcasts});
+    // Every channel/podcast gets its brand's color — this is what visually
+    // ties a brand's YouTube deep dives to its podcast deep dives together.
+    EFF_BRANDS.forEach(b=>{
+      b.channels.forEach(ch=>{ CH[ch]=b.color; });
+      b.podcasts.forEach(show=>{ PCCOL[show]=b.color; });
+    });
+    // Sort summary rows to match brand order (channels within a brand keep
+    // their natural order)
+    const chOrderFlat=EFF_BRANDS.flatMap(b=>b.channels);
     S.data.summary = [...summary].sort((a, b) => {
-      const ai = CH_ORDER.indexOf(a['Channel']);
-      const bi = CH_ORDER.indexOf(b['Channel']);
+      const ai = chOrderFlat.indexOf(a['Channel']);
+      const bi = chOrderFlat.indexOf(b['Channel']);
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
     });
-    // Default: all channels selected
-    if(S.channels.length===0) S.channels=summary.map(r=>r['Channel']).filter(Boolean);
+    // Default landing state: Home, with S.channels/S.podcasts covering
+    // everything (Home's numbers are portfolio-wide) — preserved across a
+    // "Refresh data" reload if the user had already navigated somewhere.
+    if(S.brands.length===0){
+      S.brands=EFF_BRANDS.map(b=>b.name);
+      S.channels=brandChannels(S.brands).filter(ch=>summary.some(r=>r['Channel']===ch));
+      S.podcasts=brandPodcasts(S.brands).filter(show=>pcShows.some(r=>r['Podcast']===show));
+    }
     // Default date range to previous month
     if(!S.from){
       const now=new Date();
@@ -406,7 +418,7 @@ async function loadData(){
       const ym=`${prevMonth.getFullYear()}-${String(prevMonth.getMonth()+1).padStart(2,'0')}`;
       S.from=ym; S.to=ym;
     }
-    buildSidebar();renderPage();
+    renderPage();
   }catch(e){showError(e.message);}
   setSyncing(false);
 }
@@ -426,42 +438,15 @@ async function fetchTab(tab){
 
 function setSyncing(v){
   const b=document.getElementById('syncBtn');
-  b.disabled=v; b.textContent=v?'Loading…':'Refresh data';
-  if(!v) document.getElementById('lastSync').textContent='Synced '+new Date().toLocaleTimeString();
+  if(!b) return;
+  b.disabled=v; b.textContent=v?'Loading…':'Refresh';
+  if(!v){ const s=document.getElementById('lastSync'); if(s) s.textContent='Synced '+new Date().toLocaleTimeString(); }
 }
 function setLoading(){document.getElementById('mainContent').innerHTML='<div class="state-box fade"><div class="spinner"></div><h3>Loading</h3><p>Fetching your analytics...</p></div>';}
 function showError(msg){document.getElementById('mainContent').innerHTML=`<div class="state-box fade"><h3>Connection error</h3><p>${msg}</p><br><button class="btn-ink" style="margin-top:12px;padding:9px 20px" onclick="document.getElementById('setupModal').style.display='flex'">Update settings</button></div>`;}
 
 // Returns monthly cost totals keyed by "Channel|Year|Month"
 function parseCost(v){ if(!v) return 0; const n=parseFloat(String(v).replace(/[$,]/g,'')); return isNaN(n)?0:n; }
-
-function getCostMap(){
-  const map={};
-  (S.data?.costs||[]).forEach(r=>{
-    if(!r['Channel']||!r['Month']||!r['Year']) return;
-    const key=`${r['Channel']}|${+r['Year']}|${+r['Month']}`;
-    if(!map[key]) map[key]={creator:0,editor:0,total:0};
-    map[key].creator+=parseCost(r['Creator Cost ($)']);
-    map[key].editor +=parseCost(r['Editor Cost ($)']);
-    map[key].total  +=parseCost(r['Total Cost ($)']);
-  });
-  return map;
-}
-// Sum costs for filtered monthly rows
-function aggCosts(moRows){
-  // Sum costs for channels and months that fall within the current date filter
-  if(!S.data?.costs||!S.from) return 0;
-  const [fy,fm]=S.from.split('-').map(Number);
-  const [ty,tm]=S.to?S.to.split('-').map(Number):[fy,fm];
-  const chs=S.channels;
-  return (S.data.costs||[]).reduce((s,r)=>{
-    if(!chs.includes(r['Channel'])) return s;
-    const yr=+r['Year'], mo=+r['Month'];
-    if(!yr||!mo) return s;
-    if(!inRange(yr,mo)) return s;
-    return s+parseCost(r['Total Cost ($)']);
-  },0);
-}
 
 function getLYVidSubs(ch){
   if(!S.data?.videos||!S.from) return null;
@@ -507,62 +492,41 @@ function getVidCount(ch){
     return inRange(pub.getFullYear(), pub.getMonth()+1);
   }).length;
 }
-// Get subs from Video Performance tab filtered by publish date in range
-function getVidSubs(ch){
-  if(!S.data?.videos) return 0;
-  return S.data.videos.filter(r=>{
-    if(r['Channel']!==ch) return false;
-    const pub=parseVidDate(r['Published At']);
-    if(!pub) return false;
-    return inRange(pub.getFullYear(), pub.getMonth()+1);
-  }).reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0);
+// ── BRAND SELECTION ──────────────────────────────────────────
+// S.channels/S.podcasts are always derived from S.brands via these, never
+// toggled directly, so every per-channel/per-podcast calc function
+// (filterMo/filterVids/pcDownloadsForRange/etc.) keeps working unchanged
+// no matter which view set them.
+function brandChannels(brandNames){
+  const set=new Set();
+  EFF_BRANDS.filter(b=>brandNames.includes(b.name)).forEach(b=>b.channels.forEach(ch=>set.add(ch)));
+  return [...set];
 }
-
-function setSnapSort(key){
-  if(S.snapSort===key) S.snapDir*=-1;
-  else { S.snapSort=key; S.snapDir=-1; }
+function brandPodcasts(brandNames){
+  const set=new Set();
+  EFF_BRANDS.filter(b=>brandNames.includes(b.name)).forEach(b=>b.podcasts.forEach(p=>set.add(p)));
+  return [...set];
+}
+function selectHome(){
+  S.view='home';
+  S.brands=EFF_BRANDS.map(b=>b.name);
+  S.channels=brandChannels(S.brands).filter(ch=>S.data.summary.some(r=>r['Channel']===ch));
+  S.podcasts=brandPodcasts(S.brands).filter(show=>(S.data.pcShows||[]).some(r=>r['Podcast']===show));
   renderPage();
 }
-
-function buildSidebar(){
-  // sidebar channel list hidden — channels now filtered per page
-}
-
-function toggleChannel(ch){
-  if(ch==='ALL'){
-    S.channels=S.data.summary.map(r=>r['Channel']).filter(Boolean);
-  } else {
-    // If already the sole selected channel, go back to all
-    if(S.channels.length===1&&S.channels[0]===ch){
-      S.channels=S.data.summary.map(r=>r['Channel']).filter(Boolean);
-    } else {
-      S.channels=[ch];
-    }
-  }
+function selectBrand(name){
+  S.view='brand';
+  S.brands=[name];
+  S.expandedItem=null; // reset which channel/show card is expanded — new brand, fresh page
+  S.channels=brandChannels([name]).filter(ch=>S.data.summary.some(r=>r['Channel']===ch));
+  S.podcasts=brandPodcasts([name]).filter(show=>(S.data.pcShows||[]).some(r=>r['Podcast']===show));
   renderPage();
 }
-
-function setChannel(ch){ toggleChannel(ch); }
-
-// Render inline channel filter pills for each page
-function channelFilterHTML(){
-  if(!S.data) return '';
-  const allChs=S.data.summary.map(r=>r['Channel']).filter(Boolean);
-  const allOn=S.channels.length===allChs.length;
-  return `<div class="ch-filter">
-    <span class="ch-filter-label">Channels</span>
-    <button class="ch-pill ch-pill-all${allOn?' on':''}" style="${allOn?'background:var(--ink)':''}" onclick="toggleChannel('ALL')">All</button>
-    ${allChs.map(ch=>{
-      const on=S.channels.includes(ch);
-      const color=CH[ch]||'#aaa';
-      return `<button class="ch-pill${on?' on':''}" style="${on?`background:${color}`:''}" onclick="toggleChannel('${ch.replace(/'/g,"\\'")}')">
-        <span class="ch-pill-dot" style="background:${on?'rgba(255,255,255,0.7)':color}"></span>
-        ${ch}
-      </button>`;
-    }).join('')}
-  </div>`;
-}
-function setPage(p){ renderMeeting(); }
+function selectCompare(){ S.view='compare'; renderPage(); }
+// Brand page's channel/show scorecard — clicking a card expands its full
+// deep dive below the grid (accordion, one at a time) instead of every
+// channel/show being fully expanded and stacked at once.
+function pickItem(id){ S.expandedItem=id; renderPage(); }
 
 // ── HELPERS ───────────────────────────────────────────────────
 function inRange(yr,mo){
@@ -586,8 +550,7 @@ function filterVids(rows){
   return r;
 }
 function agg(rows,col){return rows.reduce((s,r)=>s+(parseFloat(r[col])||0),0);}
-function avg(rows,col){return rows.length?agg(rows,col)/rows.length:0;}
-function fmtN(n){n=Math.round(n);return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n.toString();}
+function fmtN(n){n=Math.round(n);return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':n.toString();}
 function fmtD(n){return '$'+Math.round(n).toLocaleString();}
 function pct(a,b){return b?(((a-b)/b)*100):null;}
 function fmtP(p){if(p===null)return '';return(p>=0?'+':'')+p.toFixed(1)+'%';}
@@ -597,8 +560,8 @@ function chColor(name){return CH[name]||'#aaa';}
 // (Betsperts Golf only, since it has no API monthly/video data at all).
 // Both merge functions normalize API rows into the exact row shape the
 // rest of the app already expects, so every existing calculation
-// function (agg/filterMo/filterVids/snapshot table/deep dives/etc.)
-// keeps working completely unchanged.
+// function (agg/filterMo/filterVids/deep dives/etc.) keeps working
+// completely unchanged.
 function buildMergedVideos(oldVideos, apiVideos){
   const apiChannels=new Set(apiVideos.map(r=>r['Channel']));
   const fromApi=apiVideos.map(r=>({
@@ -680,10 +643,10 @@ function normalizeContentType(v){
   if(s.includes('video')) return 'video';
   return 'other';
 }
-// Parameterized version used by both the main dashboard (via S.from/S.to)
+// Parameterized version used by both the main pages (via S.from/S.to)
 // and the Compare page (via its own independent CMP.from/CMP.to) — no
-// shared global-state coupling, so the two views can never step on
-// each other's filters.
+// shared global-state coupling, so views can never step on each other's
+// filters.
 function inRangeExplicit(from, to, yr, mo){
   if(!from||!to) return true;
   const [fy,fm]=from.split('-').map(Number);
@@ -709,8 +672,6 @@ function contentTypeMixForRange(ch, from, to){
   });
   return {mix,total};
 }
-function getContentTypeMix(ch){ return contentTypeMixForRange(ch, S.from, S.to); }
-
 function renderContentTypeBarHTML(mix, total, label){
   if(!total) return '';
   const segs=['live','shorts','video','other'].filter(k=>mix[k]>0);
@@ -720,16 +681,10 @@ function renderContentTypeBarHTML(mix, total, label){
     <div class="ct-legend">${segs.map(k=>`<span class="ct-legend-item"><span class="leg-dot" style="background:${CT_COLORS[k]}"></span><span class="leg-txt">${CT_LABELS[k]} · ${(mix[k]/total*100).toFixed(1)}% · ${fmtN(mix[k])}</span></span>`).join('')}</div>
   </div>`;
 }
-function contentTypeBarHTML(ch){
-  const {mix,total}=getContentTypeMix(ch);
-  const isSM=S.from===S.to&&S.from!=='';
-  const label=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'all-time');
-  return renderContentTypeBarHTML(mix,total,label);
-}
 // All-metrics rollup for one channel over an explicit [from,to] range —
-// mirrors what filterMo()/getVidCount()/getVidSubs() already do for the
-// main dashboard, just parameterized instead of reading global S.from/
-// S.to, so the Compare page's independent date range never touches them.
+// mirrors what filterMo()/getVidCount() already do, just parameterized
+// instead of reading global S.from/S.to, so the Compare
+// page's independent date range never touches them.
 function channelMetricsForRange(ch, from, to){
   const moRows = (S.data?.monthly||[]).filter(r=>r['Channel']===ch && inRangeExplicit(from,to,+r['Year'],+r['Month']));
   const vidRows = (S.data?.videos||[]).filter(r=>{
@@ -747,22 +702,159 @@ function channelMetricsForRange(ch, from, to){
   };
 }
 
+// All-metrics rollup for a BRAND (a set of channels + a set of shows)
+// over an explicit [from,to] range — the brand-level equivalent of
+// channelMetricsForRange(), plus podcast episodes/downloads and costs/
+// profit, for the brand page's top-of-page current-period stat rows.
+function brandPeriodMetrics(chs, shows, from, to){
+  const moRows=(S.data?.monthly||[]).filter(r=>chs.includes(r['Channel']) && inRangeExplicit(from,to,+r['Year'],+r['Month']));
+  const vidRows=(S.data?.videos||[]).filter(r=>{
+    if(!chs.includes(r['Channel'])) return false;
+    const pub=r['Published At']?new Date(r['Published At']):null;
+    if(!pub||isNaN(pub)) return false;
+    return inRangeExplicit(from,to,pub.getFullYear(),pub.getMonth()+1);
+  });
+  const costs=(S.data?.costs||[]).reduce((s,r)=>{
+    if(!chs.includes(r['Channel'])) return s;
+    const yr=+r['Year'],mo=+r['Month'];
+    if(!yr||!mo||!inRangeExplicit(from,to,yr,mo)) return s;
+    return s+parseCost(r['Total Cost ($)']);
+  },0);
+  const revenue=agg(moRows,'Revenue ($)');
+  const episodes=shows.reduce((s,show)=>s+pcEpisodesForRange(show,from,to).length,0);
+  const downloads=shows.reduce((s,show)=>s+pcDownloadsForRange(show,from,to),0);
+  return {
+    videos: vidRows.length,
+    views: agg(moRows,'Views'),
+    revenue,
+    costs,
+    profit: revenue-costs,
+    watchHrs: agg(moRows,'Watch Hours'),
+    subs: vidRows.reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0),
+    episodes, downloads,
+  };
+}
+// Full-history monthly series (labels + values) for one channel's views or
+// one show's downloads — same "always full history regardless of the
+// active filter" convention as every other chart in the app. Feeds the
+// Channels & Shows table's click-to-chart.
+function itemMonthlySeries(kind, id){
+  if(kind==='channel'){
+    const byPeriod={};
+    S.data.monthly.filter(r=>r['Channel']===id).forEach(r=>{ const p=r['Period']; if(!p) return; byPeriod[p]=(byPeriod[p]||0)+(parseFloat(r['Views'])||0); });
+    const labels=sortPeriods(Object.keys(byPeriod));
+    return {labels, values:labels.map(p=>byPeriod[p])};
+  }
+  const byMonth={};
+  (S.data.pcMonthly||[]).filter(r=>r['Podcast']===id).forEach(r=>{ const m=r['Month']; if(!m) return; byMonth[m]=(byMonth[m]||0)+(parseFloat(r['Downloads'])||0); });
+  const labels=Object.keys(byMonth).sort();
+  return {labels, values:labels.map(m=>byMonth[m])};
+}
+
+// ── DATE PRESETS ─────────────────────────────────────────────
+// One shared preset system behind every date filter in the app (sidebar
+// footer dropdown for Home/Brand + each side of Compare) — a single
+// dropdown, with the two month inputs only appearing when "Custom
+// range…" is picked. Pure functions (no global reads) so both S and CMP
+// can share them without coupling to each other's state.
+//
+// Custom-range fix: presetKeyFor() derives a label purely from the
+// CURRENT from/to values, so right after picking "Custom range…" (which
+// deliberately leaves from/to unchanged), those values still exactly
+// match whatever preset they came from — the dropdown would silently
+// snap back to that preset and the custom inputs would never appear.
+// Fixed with an explicit S.customMode / CMP.customModeA/B flag: entering
+// custom mode is a distinct choice, not something inferred from dates
+// that happen to coincide with a named preset.
+function lastMonthYM(){
+  const d=new Date(); const p=new Date(d.getFullYear(),d.getMonth()-1,1);
+  return `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}`;
+}
+function lastNMonthsRange(n){
+  const d=new Date();
+  const to=new Date(d.getFullYear(),d.getMonth()-1,1);
+  const from=new Date(d.getFullYear(),d.getMonth()-n,1);
+  return { from:`${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}`, to:`${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}` };
+}
+// The calendar month(s) touched by a rolling N-day window ending today.
+// The underlying Sheet data is month-granular (Monthly/Podcast-Monthly
+// tabs are pre-aggregated sums, no daily breakdown) so "last 7 days"
+// can't slice to exact days — this snaps to whichever month(s) the
+// window overlaps, which is a single month unless today is early enough
+// in the month that the window spills into the previous one.
+function lastNDaysRange(n){
+  const now=new Date();
+  const start=new Date(now); start.setDate(start.getDate()-(n-1));
+  return {
+    from:`${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}`,
+    to:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,
+  };
+}
+function presetKeyFor(from,to){
+  if(!from&&!to) return 'all';
+  const l7=lastNDaysRange(7); if(from===l7.from&&to===l7.to) return 'l7d';
+  const l30=lastNDaysRange(30); if(from===l30.from&&to===l30.to) return 'l30d';
+  const lm=lastMonthYM(); if(from===lm&&to===lm) return 'last-month';
+  const r3=lastNMonthsRange(3); if(from===r3.from&&to===r3.to) return '3m';
+  const r12=lastNMonthsRange(12); if(from===r12.from&&to===r12.to) return '12m';
+  if(from&&to){
+    const [fy,fm]=from.split('-').map(Number), [ty,tm]=to.split('-').map(Number);
+    if(fy===ty&&fm===1&&tm===12) return String(fy);
+  }
+  return 'custom';
+}
+function applyPreset(v){
+  if(v==='all') return {from:'',to:''};
+  if(v==='l7d') return lastNDaysRange(7);
+  if(v==='l30d') return lastNDaysRange(30);
+  if(v==='last-month'){ const lm=lastMonthYM(); return {from:lm,to:lm}; }
+  if(v==='3m') return lastNMonthsRange(3);
+  if(v==='12m') return lastNMonthsRange(12);
+  if(v==='custom') return null; // caller keeps whatever from/to it already has
+  return {from:`${v}-01`,to:`${v}-12`};
+}
+function presetOptionsHTML(key, years){
+  return `
+    <option value="l7d" ${key==='l7d'?'selected':''}>Last 7 days</option>
+    <option value="l30d" ${key==='l30d'?'selected':''}>Last 30 days</option>
+    <option value="last-month" ${key==='last-month'?'selected':''}>Last month (${monthLabelFromYM(lastMonthYM())})</option>
+    <option value="3m" ${key==='3m'?'selected':''}>Last 3 months</option>
+    <option value="12m" ${key==='12m'?'selected':''}>Last 12 months</option>
+    ${[...years].sort((a,b)=>b-a).map(yr=>`<option value="${yr}" ${key===String(yr)?'selected':''}>${yr}</option>`).join('')}
+    <option value="all" ${key==='all'?'selected':''}>All time</option>
+    <option value="custom" ${key==='custom'?'selected':''}>Custom range…</option>
+  `;
+}
+function setPeriodPreset(v){
+  if(v==='custom'){ S.customMode=true; renderPage(); return; }
+  S.customMode=false;
+  const r=applyPreset(v);
+  if(r){ S.from=r.from; S.to=r.to; }
+  renderPage();
+}
+
 // ── COMPARE VIEW ─────────────────────────────────────────────
-// Builds the display label + "quick-select" control bar for one side of
-// the comparison — each channel gets its own independent range.
 function cmpPeriodLabel(from,to){
   const isSM = from===to && from!=='';
   return isSM?monthLabelFromYM(from):(from&&to?`${from} — ${to}`:'All time');
 }
-function cmpRangeControlsHTML(side, from, to, years){
+function setCmpPreset(side,v){
+  if(v==='custom'){ CMP['customMode'+side]=true; renderPage(); return; }
+  CMP['customMode'+side]=false;
+  const r=applyPreset(v);
+  if(r){ CMP['from'+side]=r.from; CMP['to'+side]=r.to; }
+  renderPage();
+}
+function cmpPeriodDropdownHTML(side, from, to, years, customMode){
+  const key=customMode?'custom':presetKeyFor(from,to);
   const fromKey='from'+side, toKey='to'+side;
   return `
-    <span class="filter-label">From</span>
-    <input class="month-input" type="month" value="${from}" onchange="CMP.${fromKey}=this.value;renderPage()">
-    <span class="filter-sep">→</span>
-    <input class="month-input" type="month" value="${to}" onchange="CMP.${toKey}=this.value;renderPage()">
-    <button class="yr-chip${!from&&!to?' on':''}" onclick="CMP.${fromKey}='';CMP.${toKey}='';renderPage()">All</button>
-    ${years.map(yr=>`<button class="yr-chip${from===yr+'-01'&&to===yr+'-12'?' on':''}" onclick="CMP.${fromKey}='${yr}-01';CMP.${toKey}='${yr}-12';renderPage()">${yr}</button>`).join('')}
+    <select class="month-input" onchange="setCmpPreset('${side}',this.value)">${presetOptionsHTML(key,years)}</select>
+    ${key==='custom'?`
+      <input class="month-input" type="month" value="${from}" onchange="CMP.${fromKey}=this.value;renderPage()">
+      <span class="filter-sep">→</span>
+      <input class="month-input" type="month" value="${to}" onchange="CMP.${toKey}=this.value;renderPage()">
+    `:''}
   `;
 }
 
@@ -800,18 +892,19 @@ function renderCompare(){
 
   document.getElementById('mainContent').innerHTML = `
     <div class="content fade">
+      <div class="section-head"><div class="section-label">Compare</div><div class="section-line"></div></div>
       <div class="cmp-side-row">
         <select class="cmp-side-select" style="color:${colorA}" onchange="CMP.chA=this.value;renderPage()">
           ${channelOptions.map(ch=>`<option value="${ch}" ${ch===CMP.chA?'selected':''}>${ch}</option>`).join('')}
         </select>
-        ${cmpRangeControlsHTML('A', CMP.fromA, CMP.toA, years)}
+        ${cmpPeriodDropdownHTML('A', CMP.fromA, CMP.toA, years, CMP.customModeA)}
       </div>
       <div class="cmp-vs-divider"><span class="cmp-vs">vs</span></div>
       <div class="cmp-side-row" style="margin-bottom:24px">
         <select class="cmp-side-select" style="color:${colorB}" onchange="CMP.chB=this.value;renderPage()">
           ${channelOptions.map(ch=>`<option value="${ch}" ${ch===CMP.chB?'selected':''}>${ch}</option>`).join('')}
         </select>
-        ${cmpRangeControlsHTML('B', CMP.fromB, CMP.toB, years)}
+        ${cmpPeriodDropdownHTML('B', CMP.fromB, CMP.toB, years, CMP.customModeB)}
       </div>
 
       <div class="section-head"><div class="section-label">Head-to-head</div><div class="section-line"></div></div>
@@ -848,6 +941,43 @@ function renderCompare(){
     </div>`;
 }
 
+// ── PODCASTS (Simplecast) ────────────────────────────────────
+// Data source is Simplecast (via the Sheet's "Podcast - *" tabs), pulled
+// by a separate script from the YouTube pipeline. Each show belongs to
+// exactly one brand (see BRANDS) — that's the only relationship these
+// have to the YouTube side; there's no per-show/per-channel pairing.
+function getPodcastYears(){return[...new Set((S.data?.pcMonthly||[]).map(r=>(r['Month']||'').split('-')[0]).filter(Boolean))].map(Number).sort();}
+// Union of YouTube + podcast years — the single date dropdown filters
+// both at once, so its year list has to cover whichever side goes back
+// further (podcast history can predate the YouTube channel).
+function getAllYears(){return[...new Set([...getYears(),...getPodcastYears()])].sort();}
+function pcColor(name){return PCCOL[name]||'#aaa';}
+// Downloads for one show over an explicit range, from "Podcast - Monthly"
+// (host-reported downloads by calendar month — mirrors how the YouTube
+// side sums "Monthly" rather than re-deriving from per-video totals).
+function pcDownloadsForRange(show, from, to){
+  const noFilter=!from&&!to;
+  return (S.data?.pcMonthly||[]).filter(r=>{
+    if(r['Podcast']!==show) return false;
+    if(noFilter) return true;
+    const [yr,mo]=(r['Month']||'').split('-').map(Number);
+    if(!yr||!mo) return false;
+    return inRangeExplicit(from,to,yr,mo);
+  }).reduce((s,r)=>s+(parseFloat(r['Downloads'])||0),0);
+}
+// Episodes for one show published within an explicit range, from
+// "Podcast - Episodes" — mirrors filterVids()'s publish-date filtering.
+function pcEpisodesForRange(show, from, to){
+  const noFilter=!from&&!to;
+  return (S.data?.pcEpisodes||[]).filter(r=>{
+    if(r['Podcast']!==show) return false;
+    if(noFilter) return true;
+    const pub=r['Published At']?new Date(r['Published At']):null;
+    if(!pub||isNaN(pub)) return false;
+    return inRangeExplicit(from,to,pub.getFullYear(),pub.getMonth()+1);
+  });
+}
+
 function getYears(){return[...new Set((S.data?.monthly||[]).map(r=>r['Year']).filter(Boolean))].map(Number).sort();}
 function sortPeriods(ps){
   return[...ps].sort((a,b)=>{
@@ -855,8 +985,15 @@ function sortPeriods(ps){
     return(+ay-+by)||(MO.indexOf(am)-MO.indexOf(bm));
   });
 }
-function isYrSel(yr){return S.from===`${yr}-01`&&S.to===`${yr}-12`;}
-function setQuick(f,t){S.from=f;S.to=t;renderPage();}
+function isSingleMonth(){ return S.from===S.to&&S.from!==''; }
+const FULL_MO = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Builds a display label from the ACTUALLY selected month (S.from, "YYYY-MM"),
+// not from "today minus one month".
+function monthLabelFromYM(ym){
+  if(!ym) return '';
+  const [y,m]=ym.split('-').map(Number);
+  return `${FULL_MO[m-1]} ${y}`;
+}
 
 function getLYRows(ch){
   if(!S.from) return null;
@@ -866,7 +1003,6 @@ function getLYRows(ch){
     const rows=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
     return rows.length?rows:null;
   } else {
-    // Multi-month: same month range but previous year(s)
     const [fy,fm]=S.from.split('-').map(Number);
     const [ty,tm]=S.to.split('-').map(Number);
     const rows=allMoRows.filter(r=>{
@@ -876,61 +1012,6 @@ function getLYRows(ch){
     });
     return rows.length?rows:null;
   }
-}
-function isSingleMonth(){ return S.from===S.to&&S.from!==''; }
-const FULL_MO = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-// Builds a display label from the ACTUALLY selected month (S.from, "YYYY-MM"),
-// not from "today minus one month" — the previous version always showed last
-// calendar month's name regardless of which month was actually selected.
-function monthLabelFromYM(ym){
-  if(!ym) return '';
-  const [y,m]=ym.split('-').map(Number);
-  return `${FULL_MO[m-1]} ${y}`;
-}
-
-function isLastMonth(){
-  const now=new Date();
-  const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const ym=`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
-  return S.from===ym&&S.to===ym;
-}
-function setLastMonth(){
-  const now=new Date();
-  const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const ym=`${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
-  S.from=ym;S.to=ym;renderPage();
-}
-function setLastNMonths(n){
-  const now=new Date();
-  const to=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const from=new Date(now.getFullYear(),now.getMonth()-n,1);
-  S.from=`${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}`;
-  S.to=`${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}`;
-  renderPage();
-}
-function isLastNMonths(n){
-  const now=new Date();
-  const to=new Date(now.getFullYear(),now.getMonth()-1,1);
-  const from=new Date(now.getFullYear(),now.getMonth()-n,1);
-  const ef=`${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}`;
-  const et=`${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}`;
-  return S.from===ef&&S.to===et;
-}
-
-function filterBar(){
-  const years=getYears();
-  return `<div class="filter-row">
-    <span class="filter-label">From</span>
-    <input class="month-input" type="month" value="${S.from}" onchange="S.from=this.value;renderPage()">
-    <span class="filter-sep">→</span>
-    <input class="month-input" type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
-    <span class="filter-sep" style="margin-left:4px">·</span>
-    <button class="yr-chip${isLastMonth()?' on':''}" onclick="setLastMonth()">Last month</button>
-    <button class="yr-chip${isLastNMonths(3)?' on':''}" onclick="setLastNMonths(3)">3M</button>
-    <button class="yr-chip${isLastNMonths(12)?' on':''}" onclick="setLastNMonths(12)">12M</button>
-    ${years.map(yr=>`<button class="yr-chip${isYrSel(yr)?' on':''}" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`).join('')}
-    <button class="yr-chip" onclick="S.from='';S.to='';renderPage()">All</button>
-  </div>`;
 }
 
 let _charts={};
@@ -946,431 +1027,315 @@ function chartDefaults(yFmt,extra={}){
     },...extra
   };
 }
+// ── SIDEBAR ───────────────────────────────────────────────────
+function sidebarUtilHTML(){
+  return `<div class="sidebar-util">
+    <span class="sidebar-sync" id="lastSync">Not synced</span>
+    <div style="display:flex;gap:6px">
+      <button class="sidebar-btn" onclick="document.getElementById('setupModal').style.display='flex'">Settings</button>
+      <button class="sidebar-btn primary" id="syncBtn" onclick="loadData()">Refresh</button>
+    </div>
+  </div>`;
+}
+function renderSidebar(){
+  const sb=document.getElementById('sidebar');
+  const brandRows=EFF_BRANDS.map(b=>{
+    const on=S.view==='brand'&&S.brands[0]===b.name;
+    const views=agg(filterMo(S.data.monthly).filter(r=>b.channels.includes(r['Channel'])),'Views')
+      || agg(S.data.monthly.filter(r=>b.channels.includes(r['Channel']) && inRange(+r['Year'],+r['Month'])),'Views');
+    return `<div class="sidebar-brand-row${on?' on':''}" onclick="selectBrand('${b.name.replace(/'/g,"\\'")}')" style="${on?'background:rgba(255,255,255,0.1)':''}">
+      <span class="sidebar-brand-dot" style="background:${b.color}"></span>
+      <span class="sidebar-brand-name" style="${on?'color:#fff':'color:#c9c9c6'}">${b.name}</span>
+    </div>`;
+  }).join('');
 
-function buildTopbarFilters(){
-  document.getElementById('topbarNav').innerHTML=`
-    <button class="topbar-nav-btn${S.view==='dashboard'?' on':''}" onclick="switchView('dashboard')">Dashboard</button>
-    <button class="topbar-nav-btn${S.view==='compare'?' on':''}" onclick="switchView('compare')">Compare</button>
-  `;
-  if(S.view!=='dashboard'){ document.getElementById('topbarFilters').innerHTML=''; return; }
-  const years=getYears();
-  document.getElementById('topbarFilters').innerHTML=`
-    <span class="filter-label">From</span>
-    <input class="month-input" type="month" value="${S.from}" onchange="S.from=this.value;renderPage()">
-    <span class="filter-sep">→</span>
-    <input class="month-input" type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
-    <span class="filter-sep" style="margin-left:2px">·</span>
-    <button class="yr-chip${isLastMonth()?' on':''}" onclick="setLastMonth()">Last month</button>
-    <button class="yr-chip${isLastNMonths(3)?' on':''}" onclick="setLastNMonths(3)">3M</button>
-    <button class="yr-chip${isLastNMonths(12)?' on':''}" onclick="setLastNMonths(12)">12M</button>
-    ${years.map(yr=>`<button class="yr-chip${isYrSel(yr)?' on':''}" onclick="setQuick('${yr}-01','${yr}-12')">${yr}</button>`).join('')}
-    <button class="yr-chip" onclick="S.from='';S.to='';renderPage()">All</button>
+  const years=getAllYears();
+  const key=S.customMode?'custom':presetKeyFor(S.from,S.to);
+  const footerHTML = S.view==='compare' ? '' : `
+    <div class="sidebar-footer">
+      <div>
+        <div class="sidebar-section-label" style="padding-left:0">Period</div>
+        <select class="sidebar-select" onchange="setPeriodPreset(this.value)">${presetOptionsHTML(key,years)}</select>
+        ${key==='custom'?`
+        <div class="sidebar-custom-row" style="margin-top:8px">
+          <input class="sidebar-month-input" type="month" value="${S.from}" onchange="S.from=this.value;renderPage()">
+          <span class="filter-sep">→</span>
+          <input class="sidebar-month-input" type="month" value="${S.to}" onchange="S.to=this.value;renderPage()">
+        </div>`:''}
+      </div>
+      ${sidebarUtilHTML()}
+    </div>`;
+
+  sb.innerHTML = `
+    <div>
+      <div class="sidebar-brand-mark">A/V <em>Dashboard</em></div>
+      <div class="sidebar-sup">Betsperts Media</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-row${S.view==='home'?' on':''}" onclick="selectHome()"><span class="sidebar-row-icon">&#9679;</span>Home</div>
+      <div class="sidebar-row${S.view==='compare'?' on':''}" onclick="selectCompare()"><span class="sidebar-row-icon">&#8644;</span>Compare</div>
+    </div>
+    <div class="sidebar-brands">
+      <div class="sidebar-section-label">Brands</div>
+      ${brandRows}
+    </div>
+    ${footerHTML}
   `;
 }
-
-function switchView(v){ S.view=v; renderPage(); }
 
 function renderPage(){
   if(!S.data) return;
   destroyCharts();
-  buildTopbarFilters();
+  renderSidebar();
   if(S.view==='compare') renderCompare();
-  else renderMeeting();
+  else if(S.view==='home') renderHome();
+  else renderBrandPage();
 }
 
-function buildSnapshotTable(chs, mo, lyPeriodLabel){
-  const cols='2fr 60px 80px 80px 80px 80px 80px 80px 3px 60px 80px 80px 80px 80px 80px 80px';
-  const headers=[
-    {label:'Channel',key:null},
-    {label:'Videos',key:'vc'},{label:'Views',key:'v'},{label:'Revenue',key:'rev'},
-    {label:'Costs',key:null},{label:'Profit',key:null},
-    {label:'Watch hrs',key:'wh'},{label:'Subs',key:'subs'},
-    {label:'',key:null},
-    {label:'Videos',key:null,ly:true},{label:'Views',key:null,ly:true},{label:'Revenue',key:null,ly:true},
-    {label:'Costs',key:null,ly:true},{label:'Profit',key:null,ly:true},
-    {label:'Watch hrs',key:null,ly:true},{label:'Subs',key:null,ly:true},
-  ];
+// ── HOME — quick overview of all brands at once ─────────────────
+// Portfolio KPI strip + one row per brand (YouTube + Podcast rollup,
+// YoY delta on the two headline activity metrics). Always computed
+// across every channel/podcast regardless of what was last selected
+// elsewhere — selectHome() sets S.channels/S.podcasts to "everything"
+// before this runs, so the shared filter helpers (filterMo/getVidCount/
+// pcDownloadsForRange/etc.) work unchanged.
+// The identical [from,to] window, one year earlier — for Home's brand
+// table YoY column. No meaningful shift for "All time" (no from/to).
+function yoyRangeFor(from,to){
+  if(!from||!to) return null;
+  const shiftYr=(ym,n)=>{ const [y,m]=ym.split('-').map(Number); return `${y+n}-${String(m).padStart(2,'0')}`; };
+  return {from:shiftYr(from,-1),to:shiftYr(to,-1)};
+}
 
+function renderHome(){
   const isSM=S.from===S.to&&S.from!=='';
-  const pLabel=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
+  const periodLabel=isSM?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
 
-  const sortedChs=[...chs].sort((a,b)=>{
-    const aR=mo.filter(r=>r['Channel']===a), bR=mo.filter(r=>r['Channel']===b);
-    const val=(rows)=>{
-      if(!rows.length) return -Infinity;
-      switch(S.snapSort){
-        case 'vc':  return agg(rows,'Video Count');
-        case 'v':   return agg(rows,'Views');
-        case 'rev': return agg(rows,'Revenue ($)');
-        case 'wh':  return agg(rows,'Watch Hours');
-        case 'subs':return agg(rows,'Subscribers');
-        default:    return agg(rows,'Views');
-      }
-    };
-    const aVal=val(aR), bVal=val(bR);
-    if(aVal===-Infinity&&bVal===-Infinity) return 0;
-    if(aVal===-Infinity) return 1;
-    if(bVal===-Infinity) return -1;
-    return S.snapDir*(aVal-bVal);
+  // ── PORTFOLIO KPI STRIP ──────────────────────────────────────
+  const current=brandPeriodMetrics(S.channels,S.podcasts,S.from,S.to);
+  const allEps=S.podcasts.flatMap(show=>pcEpisodesForRange(show,S.from,S.to));
+
+  // ── BRAND TABLE — YouTube + Podcast rollup per brand, with a YoY
+  // delta on Views and Downloads (the two headline activity numbers).
+  const yoyRange=yoyRangeFor(S.from,S.to);
+  const rows=EFF_BRANDS.map(b=>{
+    const m=brandPeriodMetrics(b.channels,b.podcasts,S.from,S.to);
+    const ly=yoyRange?brandPeriodMetrics(b.channels,b.podcasts,yoyRange.from,yoyRange.to):null;
+    return { b, m, viewsYoy: ly?pct(m.views,ly.views):null, dlYoy: ly?pct(m.downloads,ly.downloads):null };
   });
+  function deltaTag(p){
+    if(p===null) return '';
+    return `<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:${p>=0?'var(--green)':'var(--red)'}">${fmtP(p)} YoY</div>`;
+  }
+  const cols='1.7fr 55px 85px 75px 70px 75px 70px 3px 60px 90px 75px';
+  const ytHeaders=['Videos','Views','Revenue','Costs','Profit','Watch hrs'];
+  const podHeaders=['Eps','Downloads','Avg/ep'];
 
-  const rows=sortedChs.map(ch=>{
-    const r=mo.filter(r=>r['Channel']===ch);
-    const color=chColor(ch);
-    const v=r.length?agg(r,'Views'):null, wh=r.length?agg(r,'Watch Hours'):null;
-    const rev=r.length?agg(r,'Revenue ($)'):null;
-    const subs=getVidSubs(ch);
-    const vc2=getVidCount(ch);
-    const lyR=getLYRows(ch);
-    const ly=(col,rows)=>rows?col(rows):null;
-    const lyV=ly(r=>agg(r,'Views'),lyR), lyRev=ly(r=>agg(r,'Revenue ($)'),lyR);
-    const lyWH=ly(r=>agg(r,'Watch Hours'),lyR);
-    const lySubs=getLYVidSubs(ch);
-    const lyVC=getLYVidCount(ch);
-    // LY costs
-    const lyCosts=(S.data.costs||[]).reduce((s,r)=>{
-      if(r['Channel']!==ch) return s;
-      const yr=+r['Year'],mo=+r['Month'];
-      if(!yr||!mo) return s;
-      // Check if in LY range
-      if(!S.from) return s;
-      const [fy,fm]=S.from.split('-').map(Number);
-      const isSM2=S.from===S.to&&S.from!=='';
-      if(isSM2){ if(yr!==(fy-1)||mo!==fm) return s; }
-      else {
-        const [ty,tm]=S.to.split('-').map(Number);
-        if(!((yr>fy-1||(yr===fy-1&&mo>=fm))&&(yr<ty-1||(yr===ty-1&&mo<=tm)))) return s;
-      }
-      return s+parseCost(r['Total Cost ($)']);
-    },0);
-    const lyProfit=lyRev!==null?lyRev-lyCosts:null;
-    const chCosts=(S.data.costs||[]).reduce((s,r)=>{
-      if(r['Channel']!==ch) return s;
-      const yr=+r['Year'],mo=+r['Month'];
-      if(!yr||!mo||!inRange(yr,mo)) return s;
-      return s+parseCost(r['Total Cost ($)']);
-    },0);
-    const chProfit=rev!==null?rev-chCosts:null;
-    const allMoRows=S.data.monthly.filter(row=>row['Channel']===ch);
-    const years=getYears();const lastTwo=years.slice(-2);
-    let prev=[];
-    if(isSM&&S.from){const[fy,fm]=S.from.split('-').map(Number);prev=allMoRows.filter(row=>+row['Year']===(fy-1)&&+row['Month']===fm);}
-    else if(lastTwo.length===2) prev=allMoRows.filter(row=>+row['Year']===lastTwo[0]);
-    const safe=(a,b)=>b?pct(a,b):null;
-    const yoy={
-      vP:  safe(v,   prev.length?agg(prev,'Views'):null),
-      rP:  safe(rev, prev.length?agg(prev,'Revenue ($)'):null),
-      whP: safe(wh,  prev.length?agg(prev,'Watch Hours'):null),
-      sP:  safe(subs,prev.length?agg(prev,'Subscribers'):null),
-      vcP: safe(vc2, prev.length?agg(prev,'Video Count'):null),
-    };
-    const cell=(val,fmt,delta)=>`<div>${val!==null?`<div class="mono-cell">${fmt(val)}</div>${deltaSpanS(delta)}`:'<div class="mono-cell" style="color:var(--ink3)">—</div>'}</div>`;
-    const lyCell=(val,fmt)=>`<div class="mono-cell" style="color:var(--ink3)">${val!==null?fmt(val):'—'}</div>`;
-    const COST_CHS=['Dynasty League Football','4for4 Fantasy Football','4for4 Live!'];
-    const showCost=COST_CHS.includes(ch);
-    return `<div class="dt-row" style="grid-template-columns:${cols}">
-      <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${ch}</span></div>
-      ${cell(vc2,v=>Math.round(v).toString(),yoy.vcP)}
-      ${cell(v,fmtN,yoy.vP)}
-      ${cell(rev,fmtD,yoy.rP)}
-      <div class="mono-cell" style="color:${chCosts>0?'var(--red)':'var(--ink)'}">${chCosts>0?fmtD(chCosts):'$0'}</div>
-      <div class="mono-cell" style="color:${chProfit!==null&&chProfit>0?'var(--green)':chProfit!==null&&chProfit<0?'var(--red)':'var(--ink)'}">${chProfit!==null?fmtD(chProfit):'—'}</div>
-      ${cell(wh,fmtN,yoy.whP)}
-      ${cell(subs,fmtN,yoy.sP)}
-      <div style="background:var(--rule);width:1px;height:100%;margin:0 auto"></div>
-      ${lyCell(lyVC,v=>Math.round(v).toString())}
-      ${lyCell(lyV,fmtN)}
-      ${lyCell(lyRev,fmtD)}
-      <div class="mono-cell" style="color:var(--ink3)">${lyCosts>0?fmtD(lyCosts):'$0'}</div>
-      <div class="mono-cell" style="color:var(--ink3)">${lyProfit!==null?fmtD(lyProfit):'—'}</div>
-      ${lyCell(lyWH,fmtN)}
-      ${lyCell(lySubs,fmtN)}
-    </div>`;
-  }).join('');
+  const filtVids=filterVids(S.data.videos);
+  const topVid=[...filtVids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0))[0];
+  const topEp=[...allEps].sort((a,b)=>(parseFloat(b['Downloads'])||0)-(parseFloat(a['Downloads'])||0))[0];
 
-  function deltaSpanS(p){ if(p===null)return''; return`<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:${p>=0?'var(--green)':'var(--red)'}">${fmtP(p)}</div>`; }
+  document.getElementById('mainContent').innerHTML = `
+    <div class="content fade">
+      <div style="font-family:var(--serif);font-size:44px;color:var(--ink);margin-bottom:4px">Home</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--ink3);margin-bottom:28px;text-transform:uppercase;letter-spacing:0.1em">All brands · ${periodLabel}</div>
 
-  return `
-    <div class="section-head"><div class="section-label">Channel snapshot — ${pLabel}</div><div class="section-line"></div></div>
-    <div class="data-table" style="margin-bottom:36px">
-      <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
-        <div></div>
-        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">${pLabel}</div>
-        <div></div>
-        <div style="grid-column:span 7;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--rule2);padding-bottom:5px">${lyPeriodLabel}</div>
+      <div class="stat-row">
+        <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(current.videos)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">YouTube views</div><div class="stat-num">${fmtN(current.views)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">YouTube revenue</div><div class="stat-num">${fmtD(current.revenue)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${current.costs>0?fmtD(current.costs):'$0'}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${current.profit>=0?'var(--green)':'var(--red)'}">${fmtD(current.profit)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(current.watchHrs)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast episodes</div><div class="stat-num">${allEps.length}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast downloads</div><div class="stat-num">${fmtN(current.downloads)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Avg downloads/ep</div><div class="stat-num">${fmtN(allEps.length?current.downloads/allEps.length:0)}</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
-        ${headers.map((h,i)=>{
-          if(!h.label) return '<span></span>';
-          if(!h.key)   return `<span style="font-family:var(--mono);font-size:9px;color:${h.ly?'var(--ink3)':'var(--ink2)'};text-transform:uppercase;letter-spacing:.12em">${h.label}</span>`;
-          const active=S.snapSort===h.key;
-          const arrow=active?(S.snapDir===-1?'↓':'↑'):'↕';
-          return `<span class="sort-hd${active?' active':''}" style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em" onclick="setSnapSort('${h.key}')">${h.label} <span class="sort-arrow">${arrow}</span></span>`;
-        }).join('')}
+
+      <div class="section-head"><div class="section-label">Brands — ${periodLabel}</div><div class="section-line"></div></div>
+      <div class="data-table" style="margin-bottom:32px;overflow-x:auto">
+       <div style="min-width:940px">
+        <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
+          <div></div>
+          <div style="grid-column:span 6;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">YouTube</div>
+          <div></div>
+          <div style="grid-column:span 3;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">Podcasts</div>
+        </div>
+        <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
+          <span style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em">Brand</span>
+          ${ytHeaders.map(h=>`<span style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
+          <span></span>
+          ${podHeaders.map(h=>`<span style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
+        </div>
+        ${rows.map(({b,m,viewsYoy,dlYoy})=>`
+          <div class="dt-row" style="grid-template-columns:${cols};cursor:pointer" onclick="selectBrand('${b.name.replace(/'/g,"\\'")}')">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${b.color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${b.name}</span></div>
+            <div class="mono-cell">${Math.round(m.videos)}</div>
+            <div><div class="mono-cell">${fmtN(m.views)}</div>${deltaTag(viewsYoy)}</div>
+            <div class="mono-cell">${fmtD(m.revenue)}</div>
+            <div class="mono-cell" style="color:${m.costs>0?'var(--red)':'var(--ink2)'}">${m.costs>0?fmtD(m.costs):'$0'}</div>
+            <div class="mono-cell" style="color:${m.profit>=0?'var(--green)':'var(--red)'}">${fmtD(m.profit)}</div>
+            <div class="mono-cell">${fmtN(m.watchHrs)}</div>
+            <div style="background:var(--rule);width:1px;height:100%;margin:0 auto"></div>
+            <div class="mono-cell">${m.episodes}</div>
+            <div><div class="mono-cell">${fmtN(m.downloads)}</div>${deltaTag(dlYoy)}</div>
+            <div class="mono-cell">${fmtN(m.episodes?m.downloads/m.episodes:0)}</div>
+          </div>`).join('')}
+       </div>
       </div>
-      ${rows}
+
+      <div class="section-head"><div class="section-label">Highlights — ${periodLabel}</div><div class="section-line"></div></div>
+      <div class="hl-grid" style="margin-bottom:36px">
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top video</div><div class="hl-card-sub">Across every brand</div></div></div>
+          ${topVid?`<div class="hl-item"><div class="hl-rank">1</div><div class="hl-item-body"><div class="hl-item-title">${topVid['Title']||'Untitled'}</div><div class="hl-item-ch" style="color:${chColor(topVid['Channel'])}">${topVid['Channel']}</div></div><div class="hl-item-val">${fmtN(parseFloat(topVid['Views'])||0)}</div></div>`:`<div style="padding:18px 22px;font-size:13px;color:var(--ink3)">No videos in this period.</div>`}
+        </div>
+        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#f3e8ff">🎙️</div><div><div class="hl-card-title">Top episode</div><div class="hl-card-sub">Across every show</div></div></div>
+          ${topEp?`<div class="hl-item"><div class="hl-rank">1</div><div class="hl-item-body"><div class="hl-item-title">${topEp['Title']||'Untitled'}</div><div class="hl-item-ch" style="color:${pcColor(topEp['Podcast'])}">${topEp['Podcast']}</div></div><div class="hl-item-val">${fmtN(parseFloat(topEp['Downloads'])||0)}</div></div>`:`<div style="padding:18px 22px;font-size:13px;color:var(--ink3)">No episodes in this period.</div>`}
+        </div>
+      </div>
     </div>`;
 }
 
-// ── MEETING VIEW ──────────────────────────────────────────────
-function renderMeeting(){
+// ── BRAND PAGE — one brand's full story, YouTube + Podcasts together ──
+function renderBrandPage(){
+  const brand = EFF_BRANDS.find(b=>b.name===S.brands[0]) || EFF_BRANDS[0];
   const chs=S.channels;
+  const shows=S.podcasts;
   const mo=filterMo(S.data.monthly);
-  const allMo=S.data.monthly.filter(r=>chs.includes(r['Channel']));
   const allVids=S.data.videos;
   const isSingleMonth=S.from===S.to&&S.from!=='';
   const periodLabel=isSingleMonth?monthLabelFromYM(S.from):(S.from&&S.to?`${S.from} — ${S.to}`:'All time');
-  const meetingTitle=isSingleMonth?`${monthLabelFromYM(S.from)} <em>Review</em>`:`Meeting <em>View</em>`;
-  const chLabel=chs.length===S.data.summary.length?'all channels':`${chs.length} channel${chs.length!==1?'s':''}`;
 
-  // ── EXEC STATS ──────────────────────────────────────────────
-  const tv=agg(mo,'Views'),twh=agg(mo,'Watch Hours');
-  const tr=agg(mo,"Revenue ($)"),ts=chs.reduce((s,ch)=>s+getVidSubs(ch),0);
-  const vc=chs.reduce((s,ch)=>s+getVidCount(ch),0);
+  // ── CURRENT-PERIOD STATS — plain numbers, no comparison (that's what
+  // Compare is for: pick the same channel on both sides with different
+  // periods to get a time-vs-time comparison).
+  const current=brandPeriodMetrics(chs,shows,S.from,S.to);
 
-  let vP=null,rP=null,sP=null,whP=null,vcP=null,yrLabel='';
-  if(isSingleMonth&&S.from){
-    const [fy,fm]=S.from.split('-').map(Number);
-    const prev=allMo.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
-    if(prev.length){
-      const safe=(a,b)=>b?pct(a,b):null;
-      vP=  safe(tv,  agg(prev,'Views'));
-      rP=  safe(tr,  agg(prev,'Revenue ($)'));
-      whP= safe(twh, agg(prev,'Watch Hours'));
-      sP=  safe(ts,  agg(prev,'Subscribers'));
-      vcP= safe(vc,  agg(prev,'Video Count'));
-      yrLabel=`${MO[fm-1]} ${fy-1}`;
-    }
-  } else {
-    const years=getYears();const lastTwo=years.slice(-2);
-    if(lastTwo.length===2){
-      const byYC={};
-      allMo.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC[k])byYC[k]={views:0,rev:0,subs:0,wh:0,vc:0,count:0};byYC[k].views+=parseFloat(r['Views'])||0;byYC[k].rev+=parseFloat(r['Revenue ($)'])||0;byYC[k].subs+=parseFloat(r['Subscribers'])||0;byYC[k].wh+=parseFloat(r['Watch Hours'])||0;byYC[k].vc+=parseFloat(r['Video Count'])||0;byYC[k].count++;});
-      const t=yr=>({
-        views:chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).views||0),0),
-        rev:  chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).rev||0),0),
-        subs: chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).subs||0),0),
-        wh:   chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).wh||0),0),
-        vc:   chs.reduce((s,ch)=>s+((byYC[`${yr}|${ch}`]||{}).vc||0),0),
-      });
-      const [p,c]=[t(lastTwo[0]),t(lastTwo[1])];
-      const safe=(a,b)=>b?pct(a,b):null;
-      vP=safe(c.views,p.views); rP=safe(c.rev,p.rev); sP=safe(c.subs,p.subs);
-      whP=safe(c.wh,p.wh); vcP=safe(c.vc,p.vc);
-      yrLabel=`${lastTwo[0]} to ${lastTwo[1]}`;
-    }
-  }
-  const tc=aggCosts(mo);
-  const profit=tr-tc;
-
-  const stag=(p)=>p!==null?`<div class="stat-sub"><span class="${p>=0?'up-tag':'dn-tag'}">${fmtP(p)}</span> vs ${yrLabel}</div>`:'<div class="stat-sub">&nbsp;</div>';
-
-  // ── EXEC NARRATIVE ──────────────────────────────────────────
-  const byChV={};mo.forEach(r=>{if(!byChV[r['Channel']])byChV[r['Channel']]=0;byChV[r['Channel']]+=parseFloat(r['Views'])||0;});
-  const bestCh=Object.entries(byChV).sort((a,b)=>b[1]-a[1])[0];
-  const allMoAgg={};allMo.forEach(r=>{if(!allMoAgg[r['Period']])allMoAgg[r['Period']]=0;allMoAgg[r['Period']]+=parseFloat(r['Views'])||0;});
-  const bestPeriod=Object.entries(allMoAgg).sort((a,b)=>b[1]-a[1])[0];
-
-  let para1=`In ${isSingleMonth?periodLabel:'the selected period'}, across ${chLabel}, the portfolio generated <strong>${fmtN(tv)} views</strong> and <strong>${fmtD(tr)} in revenue</strong> from ${Math.round(vc).toLocaleString()} videos.`;
-  if(vP!==null&&yrLabel) para1+=` Views are ${vP>=0?'up':'down'} <strong>${fmtP(vP)}</strong> vs. ${yrLabel}, with revenue ${rP>=0?'up':'down'} <strong>${fmtP(rP)}</strong>.`;
-  let para2=`Viewers watched <strong>${fmtN(twh)} hours</strong> of content.`;
-  if(ts>0) para2+=` The channels added <strong>${fmtN(ts)} subscribers</strong>${sP!==null?` (${sP>=0?'+':''}${fmtP(sP)} vs. same period last year)`:''}.`;
-  let para3='';
-  if(bestCh) para3+=`<strong>${bestCh[0]}</strong> led the portfolio this period with <strong>${fmtN(bestCh[1])} views</strong>.`;
-  if(bestPeriod&&!isSingleMonth) para3+=` The strongest month on record was <em>${bestPeriod[0]}</em> with ${fmtN(bestPeriod[1])} views.`;
-
-  // ── HIGHLIGHT REEL ──────────────────────────────────────────
+  // ── HIGHLIGHT REEL (scoped to this brand) ─────────────────────
   const filtVids=filterVids(allVids);
-  const topByViews=[...filtVids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,5);
-  const topByRev=[...filtVids].sort((a,b)=>(parseFloat(b['Revenue ($)'])||0)-(parseFloat(a['Revenue ($)'])||0)).slice(0,5);
-
-  const years=getYears();const lastTwo=years.slice(-2);
-  const byYC2={};
-  S.data.monthly.forEach(r=>{const k=`${r['Year']}|${r['Channel']}`;if(!byYC2[k])byYC2[k]={views:0,rev:0};byYC2[k].views+=parseFloat(r['Views'])||0;byYC2[k].rev+=parseFloat(r['Revenue ($)'])||0;});
-  const movers=lastTwo.length===2?chs.map(ch=>{const prev=(byYC2[`${lastTwo[0]}|${ch}`]||{}).views||0;const curr=(byYC2[`${lastTwo[1]}|${ch}`]||{}).views||0;return{ch,prev,curr,p:pct(curr,prev||1)};}).filter(r=>r.prev>0||r.curr>0).sort((a,b)=>b.p-a.p):[];
+  const topVideos=[...filtVids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,10);
   const bestMonths=chs.map(ch=>{const rows=mo.filter(r=>r['Channel']===ch);if(!rows.length)return null;const best=rows.sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0))[0];return{ch,period:best['Period'],views:parseFloat(best['Views'])||0};}).filter(Boolean);
+  const topEps=[...shows.flatMap(show=>pcEpisodesForRange(show,S.from,S.to))].sort((a,b)=>(parseFloat(b['Downloads'])||0)-(parseFloat(a['Downloads'])||0)).slice(0,5);
 
-  function videoItem(r,i,valKey,valFmt){
-    const color=chColor(r['Channel']);
-    return`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title">${r['Title']||'Untitled'}</div><div class="hl-item-ch" style="color:${color}">${r['Channel']}</div></div><div class="hl-item-val">${valFmt(parseFloat(r[valKey])||0)}</div></div>`;
-  }
+  // ── CHANNELS & SHOWS TABLE — click a row to chart its full history ──
+  // Every YouTube metric per channel (podcast rows show "—" for the
+  // ones that don't apply to them), respecting the active date filter.
+  // Clicking a row swaps in that one item's monthly history chart below
+  // (full history, not date-filtered — same convention as every other
+  // chart in the app).
+  const items=[
+    ...chs.map(ch=>{
+      const chMo=mo.filter(r=>r['Channel']===ch);
+      const chVids=filterVids(allVids).filter(r=>r['Channel']===ch);
+      const views=agg(chMo,'Views');
+      const revenue=agg(chMo,'Revenue ($)');
+      const chCosts=(S.data.costs||[]).reduce((s,r)=>{
+        if(r['Channel']!==ch) return s;
+        const yr=+r['Year'],moN=+r['Month'];
+        if(!yr||!moN||!inRange(yr,moN)) return s;
+        return s+parseCost(r['Total Cost ($)']);
+      },0);
+      return { id:ch, kind:'channel', kindLabel:'YT', kindColor:brand.color,
+        videos: getVidCount(ch),
+        views, watchHrs: agg(chMo,'Watch Hours'),
+        revenue, costs: chCosts, profit: revenue-chCosts,
+        subs: chVids.reduce((s,r)=>s+(parseFloat(r['Subscribers'])||0),0),
+        rpm: views>0?revenue/(views/1000):0,
+        series: itemMonthlySeries('channel',ch) };
+    }),
+    ...shows.map(show=>({ id:show, kind:'show', kindLabel:'POD', kindColor:'#7c3aed',
+      videos: pcEpisodesForRange(show,S.from,S.to).length,
+      views: pcDownloadsForRange(show,S.from,S.to),
+      watchHrs:null, revenue:null, costs:null, profit:null, subs:null, rpm:null,
+      series: itemMonthlySeries('show',show) })),
+  ];
+  const expandedId=(S.expandedItem&&items.some(i=>i.id===S.expandedItem))?S.expandedItem:(items[0]?.id||null);
+  const expandedItem=items.find(i=>i.id===expandedId);
 
-  // ── DEEP DIVE per channel ────────────────────────────────────
-  function deepDiveSection(ch, chartIdx){
-    const color=chColor(ch);
-    const allMoRows=S.data.monthly.filter(r=>r['Channel']===ch);
-    const moRows=mo.filter(r=>r['Channel']===ch);
-    const vidRows=filterVids(allVids).filter(r=>r['Channel']===ch).sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0)).slice(0,10);
-    const ctv=agg(moRows,'Views'),ctwh=agg(moRows,'Watch Hours');
-    const ctr2=agg(moRows,'Revenue ($)'),cts=getVidSubs(ch);
-    const crpm=ctv>0?(ctr2/(ctv/1000)):0;
+  const itemCols='1.4fr 55px 78px 82px 82px 75px 65px 70px 60px 60px';
+  const dash=(v,fmt)=>v===null||v===undefined?'—':fmt(v);
+  const rowsHTML=items.map(it=>{
+    const active=it.id===expandedId;
+    return `<div class="dt-row" style="grid-template-columns:${itemCols};cursor:pointer;${active?'background:var(--surface2)':''}" onclick="pickItem('${it.id.replace(/'/g,"\\'")}')">
+      <div class="dt-name" style="${active?`color:${it.kindColor}`:''}">${it.id}</div>
+      <span class="item-kind" style="background:${it.kindColor}">${it.kindLabel}</span>
+      <span class="mono-cell">${Math.round(it.videos)}</span>
+      <span class="mono-cell">${fmtN(it.views)}</span>
+      <span class="mono-cell">${dash(it.watchHrs,fmtN)}</span>
+      <span class="mono-cell">${dash(it.revenue,fmtD)}</span>
+      <span class="mono-cell" style="${it.costs>0?'color:var(--red)':''}">${it.costs===null?'—':(it.costs>0?fmtD(it.costs):'$0')}</span>
+      <span class="mono-cell" style="${it.profit!==null?`color:${it.profit>=0?'var(--green)':'var(--red)'}`:''}">${dash(it.profit,fmtD)}</span>
+      <span class="mono-cell">${dash(it.subs,fmtN)}</span>
+      <span class="mono-cell">${dash(it.rpm,v=>'$'+v.toFixed(2))}</span>
+    </div>`;
+  }).join('');
 
-    // Costs for this channel in this period
-    const chCosts=(S.data.costs||[]).reduce((s,r)=>{
-      if(r['Channel']!==ch) return s;
-      const yr=+r['Year'],mo=+r['Month'];
-      if(!yr||!mo||!inRange(yr,mo)) return s;
-      return s+parseCost(r['Total Cost ($)']);
-    },0);
-    const chProfit=ctr2-chCosts;
-    if(isSingleMonth&&S.from){
-      const [fy,fm]=S.from.split('-').map(Number);
-      const prev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
-      cyrLabel=`${MO[fm-1]} ${fy-1}`;
-      if(prev.length){
-        const safe=(a,b)=>b?pct(a,b):null;
-        cvP={
-          vP:  safe(ctv,       agg(prev,'Views')),
-          rP:  safe(ctr2,      agg(prev,'Revenue ($)')),
-          whP: safe(ctwh,      agg(prev,'Watch Hours')),
-          sP:  safe(cts,       agg(prev,'Subscribers')),
-          vcP: safe(agg(moRows,'Video Count'), agg(prev,'Video Count')),
-        };
-      }
-    } else if(lastTwo.length===2){
-      const byYr={};allMoRows.forEach(r=>{
-        if(!byYr[r['Year']])byYr[r['Year']]={views:0,rev:0,wh:0,subs:0,vc:0,count:0};
-        byYr[r['Year']].views+=parseFloat(r['Views'])||0;
-        byYr[r['Year']].rev+=parseFloat(r['Revenue ($)'])||0;
-        byYr[r['Year']].wh+=parseFloat(r['Watch Hours'])||0;
-        byYr[r['Year']].subs+=parseFloat(r['Subscribers'])||0;
-        byYr[r['Year']].vc+=parseFloat(r['Video Count'])||0;
-        byYr[r['Year']].count++;
-      });
-      cyrLabel=`${lastTwo[0]}`;
-      if(byYr[lastTwo[0]]){
-        const p=byYr[lastTwo[0]];
-        const safe=(a,b)=>b?pct(a,b):null;
-        cvP={
-          vP:  safe(ctv,  p.views),
-          rP:  safe(ctr2, p.rev),
-          whP: safe(ctwh, p.wh),
-          sP:  safe(cts,  p.subs),
-          vcP: safe(agg(moRows,'Video Count'),p.vc),
-        };
-      }
-    }
-    function deltaSpan2(p){ if(p==null)return'<div class="stat-sub">&nbsp;</div>'; return`<div class="stat-sub"><span class="${p>=0?'up-tag':'dn-tag'}">${fmtP(p)}</span> vs ${cyrLabel}</div>`; }
+  const chartHTML = expandedItem ? `
+    <div class="chart-card wide" style="margin-bottom:32px">
+      <div class="card-top"><div class="card-label">${expandedItem.id} — monthly ${expandedItem.kind==='channel'?'views':'downloads'}, full history</div></div>
+      <div style="position:relative;height:260px"><canvas id="itemChart" role="img" aria-label="${expandedItem.id} history">${expandedItem.id} history</canvas></div>
+    </div>` : '';
 
-    const allPeriods=sortPeriods([...new Set(allMoRows.map(r=>r['Period']))]);
-    const vId=`ddV${chartIdx}`,cId=`ddC${chartIdx}`,rId=`ddR${chartIdx}`;
-
-    return {
-      html:`
-      <div style="margin-bottom:40px;padding-bottom:40px;border-bottom:1px solid var(--rule)">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-          <span style="width:12px;height:12px;border-radius:3px;background:${color};flex-shrink:0;display:inline-block"></span>
-          <span style="font-family:var(--serif);font-size:28px;line-height:1">${ch}</span>
-        </div>
-        <div class="stat-row" style="border-left:4px solid ${color};margin-bottom:20px">
-          <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${getVidCount(ch)}</div>${deltaSpan2(cvP?.vcP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${color}">${fmtN(ctv)}</div>${deltaSpan2(cvP?.vP,cyrLabel)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(ctr2)}</div>${deltaSpan2(cvP?.rP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${chCosts>0?fmtD(chCosts):'$0'}</div><div class="stat-sub">&nbsp;</div></div>
-          <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${chProfit>=0?'var(--green)':'var(--red)'}">${fmtD(chProfit)}</div><div class="stat-sub">${ctr2>0?'margin '+((chProfit/ctr2)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
-          <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(ctwh)}</div>${deltaSpan2(cvP?.whP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(cts)}</div>${deltaSpan2(cvP?.sP)}</div>
-          <div class="stat-cell"><div class="stat-eyebrow">Est. RPM</div><div class="stat-num">$${crpm.toFixed(2)}</div><div class="stat-sub">per 1K views</div></div>
-        </div>
-        ${contentTypeBarHTML(ch)}
-        <div class="chart-card wide" style="margin-bottom:16px">
-          <div class="card-top"><div class="card-label">Monthly views — full history</div></div>
-          <div style="position:relative;height:240px"><canvas id="${vId}" role="img" aria-label="${ch} views history">${ch} views</canvas></div>
-        </div>
-        ${vidRows.length?`
-        <div class="section-head"><div class="section-label">Top videos — ${periodLabel}</div><div class="section-line"></div></div>
-        <div class="data-table">
-          <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px">
-            <span>Title</span><span>Views</span><span>Watch hrs</span><span>Revenue</span>
-          </div>
-          ${vidRows.map(r=>{const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px"><div><div class="dt-name">${r['Title']||'Untitled'}</div>${pub?`<div class="dt-sub">${pub}</div>`:''}</div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div></div>`;}).join('')}
-        </div>`:`<div style="font-size:13px;color:var(--ink3);padding:12px 0">No videos published in this period.</div>`}
-      </div>`,
-      chartData:{vId,cId:null,rId:null,allPeriods,allMoRows,color}
-    };
-  }
-
-  // ── BUILD PAGE ──────────────────────────────────────────────
-  const CH_ORDER=['Dynasty League Football','4for4 Fantasy Football','4for4 Live!','Bleacher Nation','Deep Dive Podcast','Betsperts Golf','Move The Line'];
-  const sortedChs=[...chs].sort((a,b)=>{const ai=CH_ORDER.indexOf(a);const bi=CH_ORDER.indexOf(b);return(ai===-1?999:ai)-(bi===-1?999:bi);});
-  const deepDiveSections=sortedChs.map((ch,i)=>deepDiveSection(ch,i));
-
-  // Pre-compute per-channel YoY for snapshot table — all metrics
-  function chYoY(ch){
-    const allMoRows=S.data.monthly.filter(r=>r['Channel']===ch);
-    const rows=mo.filter(r=>r['Channel']===ch);
-    let prev=[];
-    let label='';
-    if(isSingleMonth&&S.from){
-      const [fy,fm]=S.from.split('-').map(Number);
-      prev=allMoRows.filter(r=>+r['Year']===(fy-1)&&+r['Month']===fm);
-      label=`${MO[fm-1]} ${fy-1}`;
-    } else if(lastTwo.length===2){
-      prev=allMoRows.filter(r=>+r['Year']===lastTwo[0]);
-      label=`${lastTwo[0]}`;
-    }
-    if(!prev.length) return {vP:null,rP:null,whP:null,sP:null,vcP:null,label};
-    const safe=(a,b)=>b?pct(a,b):null;
-    return {
-      vP:   safe(agg(rows,'Views'),         agg(prev,'Views')),
-      rP:   safe(agg(rows,'Revenue ($)'),   agg(prev,'Revenue ($)')),
-      whP:  safe(agg(rows,'Watch Hours'),   agg(prev,'Watch Hours')),
-      sP:   safe(agg(rows,'Subscribers'),   agg(prev,'Subscribers')),
-      vcP:  safe(agg(rows,'Video Count'),   agg(prev,'Video Count')),
-      label,
-    };
-  }
-  function deltaSpan(p){ if(p===null)return''; return`<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:${p>=0?'var(--green)':'var(--red)'}">${fmtP(p)}</div>`; }
-
-  // Compute LY period label for grouped header
-  let lyPeriodLabel = 'Last Year';
-  if(isSingleMonth&&S.from){
-    const [fy,fm]=S.from.split('-').map(Number);
-    lyPeriodLabel=`${MO[fm-1]} ${fy-1}`;
-  } else if(S.from&&S.to){
-    const [fy]=S.from.split('-').map(Number);
-    lyPeriodLabel=`${S.from.replace(String(fy),String(fy-1))} — ${S.to.replace(String(parseInt(S.to)),String(parseInt(S.to)-1))}`;
-  }
-
-  // Compute snapshot table HTML separately to avoid nested template literal issues
-  const snapshotHTML = chs.length <= 1 ? '' : buildSnapshotTable(chs, mo, lyPeriodLabel);
-
-  // ── RENDER PAGE ──────────────────────────────────────────────
   document.getElementById('mainContent').innerHTML=`
     <div class="content fade">
-      ${channelFilterHTML()}
-      ${chs.length>1?`<div class="stat-row">
-        <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(vc)}</div>${stag(vcP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num">${fmtN(tv)}</div>${stag(vP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(tr)}</div>${stag(rP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${tc>0?fmtD(tc):'$0'}</div><div class="stat-sub">&nbsp;</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${profit>=0?'var(--green)':'var(--red)'}">${fmtD(profit)}</div><div class="stat-sub">${tr>0?'margin '+((profit/tr)*100).toFixed(1)+'%':'&nbsp;'}</div></div>
-        <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(twh)}</div>${stag(whP)}</div>
-        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(ts)}</div>${stag(sP)}</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+        <span style="width:18px;height:18px;border-radius:5px;background:${brand.color};flex-shrink:0;display:inline-block"></span>
+        <span style="font-family:var(--serif);font-size:44px;line-height:1">${brand.name}</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--ink3);margin-bottom:24px;text-transform:uppercase;letter-spacing:0.1em;padding-left:32px">${periodLabel}</div>
+
+      <div class="stat-row">
+        <div class="stat-cell"><div class="stat-eyebrow">Videos published</div><div class="stat-num">${Math.round(current.videos)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Views</div><div class="stat-num" style="color:${brand.color}">${fmtN(current.views)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Revenue</div><div class="stat-num">${fmtD(current.revenue)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${current.costs>0?fmtD(current.costs):'$0'}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${current.profit>=0?'var(--green)':'var(--red)'}">${fmtD(current.profit)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(current.watchHrs)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Subs gained</div><div class="stat-num">${fmtN(current.subs)}</div></div>
+      </div>
+      ${shows.length?`<div class="stat-row">
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast episodes</div><div class="stat-num">${current.episodes}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast downloads</div><div class="stat-num" style="color:#7c3aed">${fmtN(current.downloads)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Avg downloads / ep</div><div class="stat-num">${fmtN(current.episodes?current.downloads/current.episodes:0)}</div></div>
       </div>`:''}
-      ${snapshotHTML}
-      <div class="section-head"><div class="section-label">Channel deep dives</div><div class="section-line"></div></div>
-      ${deepDiveSections.map(s=>s.html).join('')}
+
+      <div class="section-head"><div class="section-label">Channels &amp; shows — ${periodLabel}</div><div class="section-line"></div></div>
+      <div class="data-table" style="margin-bottom:24px;overflow-x:auto">
+       <div style="min-width:920px">
+        <div class="dt-head" style="grid-template-columns:${itemCols}">
+          <span>Name</span><span>Kind</span><span>Vids/Eps</span><span>Views/DL</span><span>Watch hrs</span><span>Revenue</span><span>Costs</span><span>Profit</span><span>Subs</span><span>RPM</span>
+        </div>
+        ${rowsHTML}
+       </div>
+      </div>
+      ${chartHTML}
+
       <div class="section-head" style="margin-top:8px"><div class="section-label">Highlight reel — ${periodLabel}</div><div class="section-line"></div></div>
+      ${topVideos.length?`
+      <div class="data-table" style="margin-bottom:24px">
+        <div class="dt-head" style="grid-template-columns:3fr 85px 80px 85px">
+          <span>Top videos</span><span>Views</span><span>Watch hrs</span><span>Revenue</span>
+        </div>
+        ${topVideos.map(r=>{const pub=r['Published At']?r['Published At'].substring(0,12):'';return`<div class="dt-row" style="grid-template-columns:3fr 85px 80px 85px"><div><div class="dt-name">${r['Title']||'Untitled'}</div><div class="dt-sub" style="color:${chColor(r['Channel'])}">${r['Channel']}${pub?` · ${pub}`:''}</div></div><div class="mono-cell">${fmtN(parseFloat(r['Views'])||0)}</div><div class="mono-cell">${fmtN(parseFloat(r['Watch Hours'])||0)}</div><div class="mono-cell">${fmtD(parseFloat(r['Revenue ($)'])||0)}</div></div>`;}).join('')}
+      </div>`:`<div style="font-size:13px;color:var(--ink3);padding:4px 0 24px">No videos published in this period.</div>`}
       <div class="hl-grid" style="margin-bottom:36px">
-        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e8f5ee">👀</div><div><div class="hl-card-title">Top by views</div><div class="hl-card-sub">Most watched</div></div></div>${topByViews.map((r,i)=>videoItem(r,i,'Views',v=>fmtN(v))).join('')}</div>
-        <div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#fef3c7">💰</div><div><div class="hl-card-title">Top by revenue</div><div class="hl-card-sub">Highest earning</div></div></div>${topByRev.map((r,i)=>videoItem(r,i,'Revenue ($)',v=>fmtD(v))).join('')}</div>
-        ${bestMonths.length?`<div class="hl-card hl-wide"><div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>${bestMonths.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div><div class="hl-item-val">${fmtN(r.views)} views</div></div>`).join('')}</div>`:''}
+        ${bestMonths.length>1?`<div class="hl-card"><div class="hl-card-head"><div class="hl-icon" style="background:#e0f2fe">📅</div><div><div class="hl-card-title">Best month per channel</div><div class="hl-card-sub">Peak viewership period</div></div></div>${bestMonths.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title" style="color:${chColor(r.ch)}">${r.ch}</div><div class="hl-item-ch">${r.period}</div></div><div class="hl-item-val">${fmtN(r.views)} views</div></div>`).join('')}</div>`:''}
+        ${topEps.length?`<div class="hl-card${bestMonths.length>1?'':' hl-wide'}"><div class="hl-card-head"><div class="hl-icon" style="background:#f3e8ff">🎙️</div><div><div class="hl-card-title">Top episodes</div><div class="hl-card-sub">By downloads</div></div></div>${topEps.map((r,i)=>`<div class="hl-item"><div class="hl-rank">${i+1}</div><div class="hl-item-body"><div class="hl-item-title">${r['Title']||'Untitled'}</div><div class="hl-item-ch" style="color:${pcColor(r['Podcast'])}">${r['Podcast']}</div></div><div class="hl-item-val">${fmtN(parseFloat(r['Downloads'])||0)}</div></div>`).join('')}</div>`:''}
       </div>
     </div>`;
 
-  // Render deep dive charts
-  deepDiveSections.forEach(s=>{
-    const {vId,allPeriods,allMoRows,color}=s.chartData;
-    _charts[vId]=new Chart(document.getElementById(vId),{
+  if(expandedItem){
+    const {labels,values}=expandedItem.series;
+    _charts['itemChart']=new Chart(document.getElementById('itemChart'),{
       type:'line',
-      data:{labels:allPeriods,datasets:[{
-        data:allPeriods.map(p=>{const r=allMoRows.find(r=>r['Period']===p);return r?parseFloat(r['Views'])||null:null;}),
-        borderColor:color,backgroundColor:color+'18',fill:true,tension:0,pointRadius:2,pointHoverRadius:5,borderWidth:2.5,spanGaps:true
+      data:{labels,datasets:[{
+        // Always black, regardless of the item's brand/kind color — the
+        // color-coding lives in the table row and badge, not the chart.
+        data:values,borderColor:'#111111',backgroundColor:'#11111118',fill:true,tension:0,pointRadius:2,pointHoverRadius:5,borderWidth:2.5,spanGaps:true
       }]},
       options:chartDefaults(v=>fmtN(v))
     });
-  });
+  }
 }
 </script>
 </body>
