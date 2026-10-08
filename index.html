@@ -254,7 +254,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 
 <script>
 const SHEET_ID = '13YtFan9EmzAnhIuvQB6vMmYa4GX8t2DDFoPtzv89H-U';
-const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type', apiMonthly:'API - Monthly', apiVideos:'API - Video Performance', pcShows:'Podcast - Shows', pcMonthly:'Podcast - Monthly', pcEpisodes:'Podcast - Episodes' };
+const TABS = { summary:'Channel Summary', monthly:'Monthly', pervideo:'Per-Video Averages', videos:'Video Performance', costs:'Costs', contentType:'API - Content Type', apiMonthly:'API - Monthly', apiVideos:'API - Video Performance', pcShows:'Podcast - Shows', pcMonthly:'Podcast - Monthly', pcEpisodes:'Podcast - Episodes', pcRevenue:'Podcast - Revenue' };
 // Defunct/unwanted entities that still linger in the underlying Sheet tabs
 // (legacy rows, not currently-maintained data) — filtered out at load time
 // so they never surface as selectable rows anywhere in the app.
@@ -332,7 +332,7 @@ async function loadData(){
   if(!S.apiKey){document.getElementById('setupModal').style.display='flex';return;}
   setSyncing(true);setLoading();
   try{
-    const [summaryRaw,monthlyOld,pervideo,videosOld,costs,contentType,apiMonthly,apiVideos,pcShows,pcMonthly,pcEpisodes]=await Promise.all([
+    const [summaryRaw,monthlyOld,pervideo,videosOld,costs,contentType,apiMonthly,apiVideos,pcShows,pcMonthly,pcEpisodes,pcRevenue]=await Promise.all([
       fetchTab(TABS.summary),fetchTab(TABS.monthly),fetchTab(TABS.pervideo),fetchTab(TABS.videos),
       fetchTab(TABS.costs).catch(()=>[]),
       fetchTab(TABS.contentType).catch(()=>[]),
@@ -341,13 +341,14 @@ async function loadData(){
       fetchTab(TABS.pcShows).catch(()=>[]),
       fetchTab(TABS.pcMonthly).catch(()=>[]),
       fetchTab(TABS.pcEpisodes).catch(()=>[]),
+      fetchTab(TABS.pcRevenue).catch(()=>[]),
     ]);
     // Drop excluded channels/podcasts here, before anything downstream
     // (merges, color maps, default selections) ever sees them.
     [summaryRaw, monthlyOld, videosOld].forEach(arr=>{
       for(let i=arr.length-1;i>=0;i--) if(EXCLUDED_CHANNELS.includes(arr[i]['Channel'])) arr.splice(i,1);
     });
-    [pcShows, pcMonthly, pcEpisodes].forEach(arr=>{
+    [pcShows, pcMonthly, pcEpisodes, pcRevenue].forEach(arr=>{
       for(let i=arr.length-1;i>=0;i--) if(EXCLUDED_PODCASTS.includes(arr[i]['Podcast'])) arr.splice(i,1);
     });
     // Merge: for the 6 API-covered channels, API data fully replaces the old
@@ -379,7 +380,7 @@ async function loadData(){
     new Set([...apiMonthly.map(r=>r['Channel']),...apiVideos.map(r=>r['Channel'])]).forEach(ch=>{
       if(ch && !knownChannels.has(ch)){ summary.push({Channel:ch}); knownChannels.add(ch); }
     });
-    S.data={summary,monthly,pervideo,videos,costs,contentType,pcShows,pcMonthly:pcMonthlyCut,pcEpisodes:pcEpisodesCut};
+    S.data={summary,monthly,pervideo,videos,costs,contentType,pcShows,pcMonthly:pcMonthlyCut,pcEpisodes:pcEpisodesCut,pcRevenue};
     // Build the effective brand list: BRANDS plus a catch-all "Other" for
     // anything unmapped, so a future new channel/show is never silently
     // invisible (see the note above BRANDS).
@@ -723,7 +724,9 @@ function brandPeriodMetrics(chs, shows, from, to){
   const revenue=agg(moRows,'Revenue ($)');
   const episodes=shows.reduce((s,show)=>s+pcEpisodesForRange(show,from,to).length,0);
   const downloads=shows.reduce((s,show)=>s+pcDownloadsForRange(show,from,to),0);
+  const podRev=shows.reduce((a,show)=>{ const r=pcRevenueForRange(show,from,to); return {revenue:a.revenue+r.revenue, impressions:a.impressions+r.impressions}; },{revenue:0,impressions:0});
   return {
+    podRevenue: podRev.revenue, podImpr: podRev.impressions, podCovered: pcRevenueCovered(from,to),
     videos: vidRows.length,
     views: agg(moRows,'Views'),
     revenue,
@@ -965,6 +968,35 @@ function pcDownloadsForRange(show, from, to){
     return inRangeExplicit(from,to,yr,mo);
   }).reduce((s,r)=>s+(parseFloat(r['Downloads'])||0),0);
 }
+// Podcast ad revenue (AdsWizz, imported monthly from a CSV into the
+// "Podcast - Revenue" tab by adswizz_revenue_import.py). It only goes back
+// to when that export starts, so "no data" must read as "—", never $0:
+// pcRevenueCovered() says whether ANY revenue month falls in a range, and
+// pcRevenueNote() explains a range that reaches back before the data.
+function pcRevenueRows(show, from, to){
+  const noFilter=!from&&!to;
+  return (S.data?.pcRevenue||[]).filter(r=>{
+    if(show && r['Podcast']!==show) return false;
+    if(noFilter) return true;
+    const [yr,mo]=(r['Month']||'').split('-').map(Number);
+    if(!yr||!mo) return false;
+    return inRangeExplicit(from,to,yr,mo);
+  });
+}
+function pcRevenueForRange(show, from, to){
+  const rows=pcRevenueRows(show,from,to);
+  return {
+    revenue: rows.reduce((s,r)=>s+(parseFloat(r['Revenue ($)'])||0),0),
+    impressions: rows.reduce((s,r)=>s+(parseFloat(r['Impressions'])||0),0),
+  };
+}
+function pcRevenueCovered(from, to){ return pcRevenueRows(null,from,to).length>0; }
+function pcRevenueStart(){ return (S.data?.pcRevenue||[]).map(r=>r['Month']).filter(Boolean).sort()[0]||''; }
+function pcRevenueNote(from, to){
+  const start=pcRevenueStart();
+  if(!start || (from && from>=start)) return '';
+  return `Podcast ad revenue (AdsWizz) starts ${monthLabelFromYM(start)} — earlier months show “—”, and a range that reaches back past it only counts what exists.`;
+}
 // Episodes for one show published within an explicit range, from
 // "Podcast - Episodes" — mirrors filterVids()'s publish-date filtering.
 function pcEpisodesForRange(show, from, to){
@@ -1121,15 +1153,16 @@ function renderHome(){
   const rows=EFF_BRANDS.map(b=>{
     const m=brandPeriodMetrics(b.channels,b.podcasts,S.from,S.to);
     const ly=yoyRange?brandPeriodMetrics(b.channels,b.podcasts,yoyRange.from,yoyRange.to):null;
-    return { b, m, viewsYoy: ly?pct(m.views,ly.views):null, dlYoy: ly?pct(m.downloads,ly.downloads):null };
+    return { b, m, viewsYoy: ly?pct(m.views,ly.views):null, dlYoy: ly?pct(m.downloads,ly.downloads):null,
+      podRevYoy: (ly&&m.podCovered&&ly.podCovered)?pct(m.podRevenue,ly.podRevenue):null };
   });
   function deltaTag(p){
     if(p===null) return '';
     return `<div style="font-size:10px;font-family:var(--mono);margin-top:1px;color:${p>=0?'var(--green)':'var(--red)'}">${fmtP(p)} YoY</div>`;
   }
-  const cols='1.7fr 55px 85px 75px 70px 75px 70px 3px 60px 90px 75px';
+  const cols='1.7fr 55px 85px 75px 70px 75px 70px 3px 60px 90px 75px 85px';
   const ytHeaders=['Videos','Views','Revenue','Costs','Profit','Watch hrs'];
-  const podHeaders=['Eps','Downloads','Avg/ep'];
+  const podHeaders=['Eps','Downloads','Avg/ep','Revenue'];
 
   const filtVids=filterVids(S.data.videos);
   const topVid=[...filtVids].sort((a,b)=>(parseFloat(b['Views'])||0)-(parseFloat(a['Views'])||0))[0];
@@ -1150,16 +1183,17 @@ function renderHome(){
         <div class="stat-cell"><div class="stat-eyebrow">Podcast episodes</div><div class="stat-num">${allEps.length}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Podcast downloads</div><div class="stat-num">${fmtN(current.downloads)}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg downloads/ep</div><div class="stat-num">${fmtN(allEps.length?current.downloads/allEps.length:0)}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast revenue</div><div class="stat-num">${current.podCovered?fmtD(current.podRevenue):'—'}</div></div>
       </div>
 
       <div class="section-head"><div class="section-label">Brands — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table" style="margin-bottom:32px;overflow-x:auto">
-       <div style="min-width:940px">
+       <div style="min-width:1000px">
         <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px 0;gap:8px">
           <div></div>
           <div style="grid-column:span 6;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">YouTube</div>
           <div></div>
-          <div style="grid-column:span 3;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">Podcasts</div>
+          <div style="grid-column:span 4;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--ink2);padding-bottom:5px">Podcasts</div>
         </div>
         <div style="display:grid;grid-template-columns:${cols};background:var(--surface2);border-bottom:1px solid var(--rule);padding:8px 20px;gap:8px">
           <span style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em">Brand</span>
@@ -1167,7 +1201,7 @@ function renderHome(){
           <span></span>
           ${podHeaders.map(h=>`<span style="font-family:var(--mono);font-size:9px;color:var(--ink2);text-transform:uppercase;letter-spacing:.12em">${h}</span>`).join('')}
         </div>
-        ${rows.map(({b,m,viewsYoy,dlYoy})=>`
+        ${rows.map(({b,m,viewsYoy,dlYoy,podRevYoy})=>`
           <div class="dt-row" style="grid-template-columns:${cols};cursor:pointer" onclick="selectBrand('${b.name.replace(/'/g,"\\'")}')">
             <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:${b.color};flex-shrink:0;display:inline-block"></span><span class="dt-name">${b.name}</span></div>
             <div class="mono-cell">${Math.round(m.videos)}</div>
@@ -1180,9 +1214,11 @@ function renderHome(){
             <div class="mono-cell">${m.episodes}</div>
             <div><div class="mono-cell">${fmtN(m.downloads)}</div>${deltaTag(dlYoy)}</div>
             <div class="mono-cell">${fmtN(m.episodes?m.downloads/m.episodes:0)}</div>
+            <div><div class="mono-cell">${m.podCovered?fmtD(m.podRevenue):'—'}</div>${deltaTag(podRevYoy)}</div>
           </div>`).join('')}
        </div>
       </div>
+      ${pcRevenueNote(S.from,S.to)?`<div style="font-size:12px;color:var(--ink3);margin:-20px 0 32px">${pcRevenueNote(S.from,S.to)}</div>`:''}
 
       <div class="section-head"><div class="section-label">Highlights — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="hl-grid" style="margin-bottom:36px">
@@ -1243,11 +1279,19 @@ function renderBrandPage(){
         rpm: views>0?revenue/(views/1000):0,
         series: itemMonthlySeries('channel',ch) };
     }),
-    ...shows.map(show=>({ id:show, kind:'show', kindLabel:'POD', kindColor:'#7c3aed',
-      videos: pcEpisodesForRange(show,S.from,S.to).length,
-      views: pcDownloadsForRange(show,S.from,S.to),
-      watchHrs:null, revenue:null, costs:null, profit:null, subs:null, rpm:null,
-      series: itemMonthlySeries('show',show) })),
+    ...shows.map(show=>{
+      const downloads=pcDownloadsForRange(show,S.from,S.to);
+      // Revenue is "—" (null), not $0, for a range the AdsWizz export
+      // doesn't reach. RPM here = revenue per 1,000 DOWNLOADS, the closest
+      // analogue to the YouTube per-1,000-views figure in the same column.
+      const rev=pcRevenueCovered(S.from,S.to)?pcRevenueForRange(show,S.from,S.to).revenue:null;
+      return { id:show, kind:'show', kindLabel:'POD', kindColor:'#7c3aed',
+        videos: pcEpisodesForRange(show,S.from,S.to).length,
+        views: downloads,
+        watchHrs:null, revenue:rev, costs:null, profit:null, subs:null,
+        rpm: rev===null?null:(downloads>0?rev/(downloads/1000):0),
+        series: itemMonthlySeries('show',show) };
+    }),
   ];
   const expandedId=(S.expandedItem&&items.some(i=>i.id===S.expandedItem))?S.expandedItem:(items[0]?.id||null);
   const expandedItem=items.find(i=>i.id===expandedId);
@@ -1297,7 +1341,11 @@ function renderBrandPage(){
         <div class="stat-cell"><div class="stat-eyebrow">Podcast episodes</div><div class="stat-num">${current.episodes}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Podcast downloads</div><div class="stat-num" style="color:#7c3aed">${fmtN(current.downloads)}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg downloads / ep</div><div class="stat-num">${fmtN(current.episodes?current.downloads/current.episodes:0)}</div></div>
-      </div>`:''}
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast revenue</div><div class="stat-num" style="color:#7c3aed">${current.podCovered?fmtD(current.podRevenue):'—'}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Ad impressions</div><div class="stat-num">${current.podCovered?fmtN(current.podImpr):'—'}</div></div>
+        <div class="stat-cell"><div class="stat-eyebrow">Podcast eCPM</div><div class="stat-num">${current.podCovered&&current.podImpr>0?'$'+(current.podRevenue/current.podImpr*1000).toFixed(2):'—'}</div></div>
+      </div>
+      ${pcRevenueNote(S.from,S.to)?`<div style="font-size:12px;color:var(--ink3);margin:-8px 0 20px">${pcRevenueNote(S.from,S.to)}</div>`:''}`:''}
 
       <div class="section-head"><div class="section-label">Channels &amp; shows — ${periodLabel}</div><div class="section-line"></div></div>
       <div class="data-table" style="margin-bottom:24px;overflow-x:auto">
