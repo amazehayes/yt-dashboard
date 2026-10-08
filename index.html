@@ -95,11 +95,11 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); line-
 .filter-sep { color: var(--sidebar-ink3); font-size: 12px; }
 
 /* STAT ROW */
-.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 28px; }
-.stat-cell { padding: 26px 24px 22px; border-right: 1px solid var(--rule); }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(142px, 1fr)); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--white); margin-bottom: 28px; }
+.stat-cell { padding: 26px 18px 22px; border-right: 1px solid var(--rule); }
 .stat-cell:last-child { border-right: none; }
 .stat-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--ink3); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 12px; }
-.stat-num { font-family: var(--serif); font-size: 48px; line-height: 1; color: var(--ink); }
+.stat-num { font-family: var(--serif); font-size: 44px; line-height: 1; color: var(--ink); }
 .stat-sub { font-size: 13px; color: var(--ink3); margin-top: 8px; display: flex; align-items: center; gap: 5px; }
 .up-tag { color: var(--green); font-family: var(--mono); font-size: 12px; background: var(--green-bg); padding: 2px 7px; border-radius: 3px; font-weight: 600; }
 .dn-tag { color: var(--red); font-family: var(--mono); font-size: 12px; background: var(--red-bg); padding: 2px 7px; border-radius: 3px; font-weight: 600; }
@@ -1180,6 +1180,8 @@ function renderHome(){
         <div class="stat-cell"><div class="stat-eyebrow">Total costs</div><div class="stat-num" style="color:var(--red)">${current.costs>0?fmtD(current.costs):'$0'}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Profit</div><div class="stat-num" style="color:${current.profit>=0?'var(--green)':'var(--red)'}">${fmtD(current.profit)}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Watch hours</div><div class="stat-num">${fmtN(current.watchHrs)}</div></div>
+      </div>
+      <div class="stat-row">
         <div class="stat-cell"><div class="stat-eyebrow">Podcast episodes</div><div class="stat-num">${allEps.length}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Podcast downloads</div><div class="stat-num">${fmtN(current.downloads)}</div></div>
         <div class="stat-cell"><div class="stat-eyebrow">Avg downloads/ep</div><div class="stat-num">${fmtN(allEps.length?current.downloads/allEps.length:0)}</div></div>
